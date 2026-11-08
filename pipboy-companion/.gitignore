@@ -1,0 +1,7 @@
+node_modules/
+data/
+public/vendor/
+*.log
+.DS_Store
+emulator/.build/
+apps/*/contact-sheet.png

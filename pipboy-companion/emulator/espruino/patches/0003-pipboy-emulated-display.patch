@@ -1,0 +1,91 @@
+Pip-Boy LINUX (emulated) display: draw videos and Pip.blitImage.
+
+- lcdFSMC_setCursor is called with absolute screen coordinates but blitPixel added the
+  window origin again, so video frames were drawn off-screen ("OOB pixel"). Track the
+  cursor relative to the window and wrap rows at the window width, as the LCD does.
+- Pip.blitImage did nothing on LINUX builds, so the menus, header and footer (drawn into
+  2 bit buffers and blitted) never appeared. Add software lcdFSMC_blit4Bit/blit2Bit on
+  top of the emulated blitPixel, matching libs/graphics/lcd_fsmc.c.
+
+diff --git a/libs/pipboy/jswrap_pipboy.c b/libs/pipboy/jswrap_pipboy.c
+index b596f2c5..71aaf76a 100644
+--- a/libs/pipboy/jswrap_pipboy.c
++++ b/libs/pipboy/jswrap_pipboy.c
+@@ -602,26 +602,58 @@ void jswrap_pb_audioStartVar(JsVar *wav, JsVar *options) {
+ 
+ 
+ #ifdef LINUX
+-int px,py,ox,oy;
++// Emulate the LCD controller's drawing window: pixels fill it row by row from the cursor
++int px,py,ox,oy,ow;
+ void lcdFSMC_blitStart(JsGraphics *gfx, int x, int y, int w, int h) {
+   ox=x;
+   oy=y;
++  ow=w;
+   px=0;
+   py=0;
+ }
+-void lcdFSMC_setCursor(JsGraphics *gfx, int x, int y) {
+-  px=x;
+-  py=y;
++void lcdFSMC_setCursor(JsGraphics *gfx, int x, int y) { // absolute screen coordinates
++  px=x-ox;
++  py=y-oy;
+ }
+ void lcdFSMC_blitPixel(unsigned int col) {
+-  if (py+oy>319 || px+ox>479) {
+-    jsiConsolePrintf("OOB pixel %d,%d\n", px+ox, py+oy);
+-  } else
++  if (px>=ow) { px=0; py++; }
++  if (py+oy<=319 && px+ox<=479)
+     graphicsSetPixel(&graphicsInternal, px+ox, py+oy, col);
+   px++;
+ }
+ void lcdFSMC_blitEnd() {
+ }
++typedef void (*FsmcNewLineCallback)(int y, uint16_t *palette);
++/// Software version of lcd_fsmc.c's lcdFSMC_blit4Bit/blit2Bit: paletted image rows, each pixel repeated 'scale' times
++static void lcdFSMC_blitPaletted(int bpp, JsGraphics *gfx, int x, int y, int w, int h, int scale, JsvStringIterator *pixels, uint16_t *palette, FsmcNewLineCallback callback) {
++  int pixelsPerByte = 8/bpp, mask = (1<<bpp)-1;
++  lcdFSMC_blitStart(gfx, x, y, w*scale, h*scale);
++  for (int row=0;row<h;row++) {
++    JsvStringIterator rowStart;
++    jsvStringIteratorClone(&rowStart, pixels);
++    for (int n=1;n<=scale;n++) {
++      if (callback) callback(y+row*scale+n, palette);
++      for (int i=0;i<w/pixelsPerByte;i++) {
++        int bitData = jsvStringIteratorGetCharAndNext(pixels);
++        for (int shift=8-bpp;shift>=0;shift-=bpp)
++          for (int s=0;s<scale;s++)
++            lcdFSMC_blitPixel(palette[(bitData>>shift)&mask]);
++      }
++      if (n<scale) { // send the same row again
++        jsvStringIteratorFree(pixels);
++        jsvStringIteratorClone(pixels, &rowStart);
++      }
++    }
++    jsvStringIteratorFree(&rowStart);
++  }
++  lcdFSMC_blitEnd();
++}
++void lcdFSMC_blit4Bit(JsGraphics *gfx, int x, int y, int w, int h, int scale, JsvStringIterator *pixels, uint16_t *palette, FsmcNewLineCallback callback) {
++  lcdFSMC_blitPaletted(4, gfx, x, y, w, h, scale, pixels, palette, callback);
++}
++void lcdFSMC_blit2Bit(JsGraphics *gfx, int x, int y, int w, int h, int scale, JsvStringIterator *pixels, uint16_t *palette, FsmcNewLineCallback callback) {
++  lcdFSMC_blitPaletted(2, gfx, x, y, w, h, scale, pixels, palette, callback);
++}
+ #endif
+ 
+ void jswrap_pb_videoFrame() {
+@@ -1171,11 +1203,9 @@ void jswrap_pb_blitImage(JsVar *image, int x, int y, JsVar *options) {
+   jsvStringIteratorNew(&it, img.buffer, (size_t)img.bitmapOffset);
+   uint16_t palette[16];
+   memset(palette,0,sizeof(palette));
+-#ifndef LINUX
+   if (img.bpp==4) lcdFSMC_blit4Bit(gfx, x, y, img.width, height, scale, &it, palette, getPaletteForLine4bpp);
+   else if (img.bpp==2) lcdFSMC_blit2Bit(gfx, x, y, img.width, height, scale, &it, palette, getPaletteForLine2bpp);
+   else jsExceptionHere(JSET_ERROR, "Unsupported BPP");
+-#endif
+   jsvStringIteratorFree(&it);
+   _jswrap_graphics_freeImageInfo(&img);
+ }

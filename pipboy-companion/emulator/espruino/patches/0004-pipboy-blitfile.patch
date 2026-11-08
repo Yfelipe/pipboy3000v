@@ -1,0 +1,71 @@
+Pip.blitFile for the emulator (Pip-OS 1.33).
+
+Pip-OS 1.33 draws DATA > FEEDS images and the INV > ID card with Pip.blitFile, which is in
+the firmware's (unpublished) Espruino commit but not in the public tree. Add an emulator version:
+it copies rows of a raw image file into an ArrayBuffer Graphics, which the firmware then blits.
+
+--- a/libs/pipboy/jswrap_pipboy.c	2026-11-08 18:07:15.002973776 +1300
++++ b/libs/pipboy/jswrap_pipboy.c	2026-11-08 18:07:15.004808931 +1300
+@@ -1745,3 +1745,55 @@
+ }
+ 
+ */
++
++/*JSON{
++  "type" : "staticmethod",
++  "class" : "Pip",
++  "name" : "blitFile",
++  "ifdef" : "LINUX",
++  "generate" : "jswrap_pb_blitFile",
++  "params" : [
++      ["graphics","JsVar","An ArrayBuffer Graphics instance (such as `bC`)"],
++      ["file","JsVar","A File from `E.openFile`"],
++      ["options","JsVar","`{ y, height, srcWidth, srcHeight }`"]
++  ]
++}
++Emulator implementation of `Pip.blitFile` from Pip-OS 1.33 (DATA > FEEDS, INV > ID): copy
++rows `y` to `y+height` of a raw image file (`srcWidth` x `srcHeight` pixels at the Graphics'
++bit depth, rows packed, as the Graphics buffer) into the top rows of the Graphics buffer.
++Rows outside the image are cleared.
++*/
++void jswrap_pb_blitFile(JsVar *graphics, JsVar *file, JsVar *options) {
++  JsGraphics gfx;
++  if (!graphicsGetFromVar(&gfx, graphics)) return;
++  int bpp = gfx.data.bpp;
++  int y = 0, height = 0, srcWidth = gfx.data.width, srcHeight = 0x7FFFFFFF;
++  if (jsvIsObject(options)) {
++    y = jsvGetIntegerAndUnLock(jsvObjectGetChildIfExists(options, "y"));
++    height = jsvGetIntegerAndUnLock(jsvObjectGetChildIfExists(options, "height"));
++    JsVar *v = jsvObjectGetChildIfExists(options, "srcWidth");
++    if (v) srcWidth = jsvGetIntegerAndUnLock(v);
++    v = jsvObjectGetChildIfExists(options, "srcHeight");
++    if (v) srcHeight = jsvGetIntegerAndUnLock(v);
++  }
++  if (height <= 0 || height > gfx.data.height) height = gfx.data.height;
++  JsVar *buf = jsvObjectGetChildIfExists(graphics, "buffer");
++  size_t dstLen = 0;
++  char *dst = buf ? jsvGetDataPointer(buf, &dstLen) : 0;
++  jsvUnLock(buf);
++  if (!dst) {
++    jsExceptionHere(JSET_ERROR, "Graphics buffer is not directly accessible");
++    return;
++  }
++  int srcRow = (srcWidth*bpp+7)/8, dstRow = (gfx.data.width*bpp+7)/8;
++  int copy = srcRow < dstRow ? srcRow : dstRow;
++  for (int r=0; r<height && (size_t)((r+1)*dstRow) <= dstLen; r++) {
++    char *d = dst + r*dstRow;
++    memset(d, 0, (size_t)dstRow);
++    if (y+r < 0 || y+r >= srcHeight) continue;
++    jswrap_file_skip_or_seek(file, (y+r)*srcRow, false);
++    JsVar *s = jswrap_file_read(file, copy);
++    if (s && jsvHasCharacterData(s)) jsvGetStringChars(s, 0, d, (size_t)copy);
++    jsvUnLock(s);
++  }
++}
+--- a/libs/pipboy/jswrap_pipboy.h	2026-11-08 18:07:35.615627389 +1300
++++ b/libs/pipboy/jswrap_pipboy.h	2026-11-08 18:07:35.617884135 +1300
+@@ -42,3 +42,4 @@
+ void jswrap_pb_init();
+ void jswrap_pb_kill();
+ bool jswrap_pb_idle();
++void jswrap_pb_blitFile(JsVar *graphics, JsVar *file, JsVar *options);

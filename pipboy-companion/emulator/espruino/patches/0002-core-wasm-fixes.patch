@@ -1,0 +1,121 @@
+Core changes needed to run under WebAssembly.
+
+- jsiConsolePrintf/jsjcDebugPrintf: pass a callback with the vcbprintf_callback signature
+  instead of casting jsiConsolePrint. WebAssembly traps on calls through a function pointer
+  of the wrong type (it is undefined behaviour in C, harmless on ARM/x86).
+- jsiIdle: like EMSCRIPTEN, sleep (return to the host) even though USB is "connected".
+- jshTransmit: send console output through the transmit buffer (for the host to read)
+  rather than to stdout as on LINUX.
+- jsvAddressToVar: Storage is memory-mapped on WASM, so return a flash-backed string
+  instead of copying the file into RAM (which fails for large .bootcde files).
+- poke8/16/32: map the address with jshFlashGetMemMapAddress, as peek already does, so
+  the WASM target can give device addresses (registers, CCM RAM) somewhere to live.
+- E.nativeCall: throw instead of jumping into ARM machine code.
+- jsuGetFreeStack (LINUX): ESPR_STACK_SIZE overrides the assumed 1 MB stack, so an emulator
+  can match a device's stack (it decides, for example, whether Storage can be compacted).
+
+diff --git a/src/jsdevices.c b/src/jsdevices.c
+index f0c1ca82..41088b22 100644
+--- a/src/jsdevices.c
++++ b/src/jsdevices.c
+@@ -204,7 +204,7 @@ void jshTransmit(
+     return;
+   }
+ #endif
+-#ifndef LINUX
++#if !defined(LINUX) || defined(WASM) // WASM: console output goes to the host via the transmit buffer
+ #ifdef USB
+   if (device==EV_USBSERIAL && !jshIsUSBSERIALConnected()) {
+     jshTransmitClearDevice(EV_USBSERIAL); // clear out stuff already waiting
+diff --git a/src/jsflash.c b/src/jsflash.c
+index 6fc9c99e..1e64d4cd 100644
+--- a/src/jsflash.c
++++ b/src/jsflash.c
+@@ -1030,7 +1030,7 @@ JsVar* jsvAddressToVar(size_t addr, uint32_t length) {
+     return jsvNewFlashString((char*)(size_t)addr, (size_t)length);
+   }
+ #endif
+-#ifdef LINUX
++#if defined(LINUX) && !defined(WASM) // WASM keeps flash in memory, so it can be mapped
+   // linux fakes flash with a file, so we can't just return a pointer to it!
+   uint32_t alignedSize = jsfAlignAddress((uint32_t)length);
+   char *d = (char*)malloc(alignedSize);
+diff --git a/src/jsinteractive.c b/src/jsinteractive.c
+index 7ddcfac0..ae292caf 100644
+--- a/src/jsinteractive.c
++++ b/src/jsinteractive.c
+@@ -308,7 +308,7 @@ NO_INLINE void jsiConsolePrintString_int(const char *str) {
+ void jsiConsolePrintf(const char *fmt, ...) {
+   va_list argp;
+   va_start(argp, fmt);
+-  vcbprintf((vcbprintf_callback)jsiConsolePrint,0, fmt, argp);
++  vcbprintf(vcbprintf_callback_jsiConsolePrintString, 0, fmt, argp);
+   va_end(argp);
+ }
+ #else
+@@ -2624,7 +2624,7 @@ void jsiIdle() {
+ 
+   // Go to sleep!
+   if (loopsIdling>=1 && // once around the idle loop without having done any work already (just in case)
+-#if defined(USB) && !defined(EMSCRIPTEN)
++#if defined(USB) && !defined(EMSCRIPTEN) && !defined(WASM)
+       !jshIsUSBSERIALConnected() && // if USB is on, no point sleeping (later, sleep might be more drastic)
+ #endif
+       !jshHasEvents() //no events have arrived in the mean time
+diff --git a/src/jsjitc.c b/src/jsjitc.c
+index 565847e3..e36afd93 100644
+--- a/src/jsjitc.c
++++ b/src/jsjitc.c
+@@ -60,7 +60,7 @@ void jsjcDebugPrintf(const char *fmt, ...) {
+     }
+     va_list argp;
+     va_start(argp, fmt);
+-    vcbprintf((vcbprintf_callback)jsiConsolePrint,0, fmt, argp);
++    vcbprintf(vcbprintf_callback_jsiConsolePrintString, 0, fmt, argp);
+     va_end(argp);
+   }
+ }
+diff --git a/src/jsutils.c b/src/jsutils.c
+index e0c5f18f..c5318c57 100644
+--- a/src/jsutils.c
++++ b/src/jsutils.c
+@@ -943,7 +943,11 @@ size_t jsuGetFreeStack() {
+   char ptr; // this is on the stack
+   extern void *STACK_BASE;
+   uint32_t count =  (uint32_t)((size_t)STACK_BASE - (size_t)&ptr);
++#ifdef ESPR_STACK_SIZE // e.g. an emulator matching a device's much smaller stack
++  const uint32_t max_stack = ESPR_STACK_SIZE;
++#else
+   const uint32_t max_stack = 1000000; // give it 1 megabyte of stack
++#endif
+   if (count>max_stack) return 0;
+   return max_stack - count;
+ #elif defined(ESP32)
+diff --git a/src/jswrap_espruino.c b/src/jswrap_espruino.c
+index d7ef62f2..3c43c04a 100644
+--- a/src/jswrap_espruino.c
++++ b/src/jswrap_espruino.c
+@@ -243,6 +243,10 @@ The argument types in `sig` are:
+ * `JsVar` - Pointer to an Espruino JsVar structure
+ */
+ JsVar *jswrap_espruino_nativeCall(JsVarInt addr, JsVar *signature, JsVar *data) {
++#ifdef WASM
++  jsExceptionHere(JSET_ERROR, "E.nativeCall can't run machine code under WebAssembly");
++  return 0;
++#endif
+   unsigned int argTypes = 0;
+   if (jsvIsUndefined(signature)) {
+     // Nothing to do
+diff --git a/src/jswrap_io.c b/src/jswrap_io.c
+index 4587cab9..08def70d 100644
+--- a/src/jswrap_io.c
++++ b/src/jswrap_io.c
+@@ -150,6 +150,8 @@ void _jswrap_io_poke(JsVarInt addr, uint32_t data, int wordSize) {
+ }
+ 
+ void jswrap_io_poke(JsVarInt addr, JsVar *data, int wordSize) {
++  // as in jswrap_io_peek
++  addr = (JsVarInt)jshFlashGetMemMapAddress((size_t)addr);
+   if (jsvIsNumeric(data)) {
+     _jswrap_io_poke(addr, (uint32_t)jsvGetInteger(data), wordSize);
+   } else if (jsvIsIterable(data)) {

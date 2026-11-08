@@ -1,0 +1,82 @@
+{
+  "apps": [
+    {
+      "id": "mojave",
+      "name": "Mojave UI",
+      "description": "Alternative Pip-Boy interface in the style of the TV series' second season: amber New Vegas theme, faction reputation, quest log, Mojave map, Pip-OS 1.33's ID card, feeds and lists, plus FM radio presets, a media remote, notes and an inbox.",
+      "board": "pipboy",
+      "file": "mojave/mojave.min.js",
+      "storageName": "mojave.min.js",
+      "pages": [
+        3,
+        6,
+        8,
+        1,
+        1
+      ],
+      "launcher": "USER/MOJAVE.JS",
+      "sdFiles": [
+        {
+          "file": "mojave/sd/USER/MOJAVE.EXT",
+          "path": "USER/MOJAVE.EXT"
+        }
+      ]
+    },
+    {
+      "id": "pipos-x",
+      "name": "PIP-OS X (concept)",
+      "description": "A futuristic take on the Pip-Boy: holographic rings and radar, S.P.E.C.I.A.L. chart, V.A.T.S. targeting, rotating wireframes, the device's own Vault Boy and map animations, Pip-OS 1.33's ID card, feeds and lists, plus FM radio presets, a media remote, notes and an inbox.",
+      "board": "pipboy",
+      "file": "pipos-x/pipos-x.min.js",
+      "storageName": "pipos-x.min.js",
+      "pages": [
+        3,
+        4,
+        8,
+        2,
+        1
+      ],
+      "launcher": "USER/PIPOSX.JS",
+      "sdFiles": [
+        {
+          "file": "pipos-x/sd/USER/PIPOSX.EXT",
+          "path": "USER/PIPOSX.EXT"
+        }
+      ]
+    }
+  ],
+  "loader": {
+    "file": "extensions/min/loader.js",
+    "storageName": ".boot0"
+  },
+  "extensions": [
+    {
+      "id": "remote",
+      "name": "Media remote",
+      "description": "Adds INV \u203a REMOTE: the wheels control volume, play/pause and tracks on the computer the Pip-Boy is plugged into (USB media keys).",
+      "file": "extensions/min/remote.js",
+      "storageName": "ext.remote.js"
+    },
+    {
+      "id": "radio",
+      "name": "Radio presets",
+      "description": "Puts your stations from the Radio presets page into the stock RADIO menu: one press tunes the Pip-Boy's FM radio.",
+      "file": "extensions/min/radio.js",
+      "storageName": "ext.radio.js"
+    },
+    {
+      "id": "notes",
+      "name": "Notes",
+      "description": "Adds DATA \u203a NOTES: text notes from the SD card, made on the companion's ID, lists & notes page.",
+      "file": "extensions/min/notes.js",
+      "storageName": "ext.notes.js"
+    },
+    {
+      "id": "inbox",
+      "name": "Inbox",
+      "description": "Adds STAT \u203a INBOX to the stock interface: messages you send from the companion's Home page, kept on the SD card to read later.",
+      "file": "extensions/min/inbox.js",
+      "storageName": "ext.inbox.js"
+    }
+  ]
+}

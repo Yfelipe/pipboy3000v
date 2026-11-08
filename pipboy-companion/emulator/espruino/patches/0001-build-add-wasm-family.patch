@@ -1,0 +1,50 @@
+Add the WASM chip family to the build system.
+
+boards/*_WASM.py set family "WASM"; the Makefile then uses make/family/WASM.make and
+make/targets/WASM.make (both shipped in this overlay, not in upstream).
+
+diff --git a/Makefile b/Makefile
+index ed70e181..39d8be07 100755
+--- a/Makefile
++++ b/Makefile
+@@ -884,7 +884,9 @@ $(OBJDIR)/%.S.o:
+ 	@mkdir -p $(shell dirname $@) # create directory if it doesn't exist
+ 	@$(call compile)
+ 
+-ifdef LINUX # ---------------------------------------------------
++ifdef WASM # WebAssembly (WASI); boards also set LINUX=1 for POSIX file access
++include make/targets/WASM.make
++else ifdef LINUX # ---------------------------------------------------
+ include make/targets/LINUX.make
+ else ifdef EMSCRIPTEN
+ include make/targets/EMSCRIPTEN.make
+diff --git a/scripts/build_platform_config.py b/scripts/build_platform_config.py
+index 214f39a3..85d6896d 100755
+--- a/scripts/build_platform_config.py
++++ b/scripts/build_platform_config.py
+@@ -55,6 +55,7 @@ if "boardname" in board.info:
+ 
+ LINUX = board.chip["family"]=="LINUX"
+ EMSCRIPTEN = board.chip["family"]=="EMSCRIPTEN"
++WASM = board.chip["family"]=="WASM"
+ 
+ if not "default_console" in board.info:
+   board.info["default_console"] = "EV_SERIAL1"
+@@ -196,6 +197,8 @@ if board.chip["family"]=="LINUX":
+   board.chip["class"]="LINUX"
+ elif board.chip["family"]=="EMSCRIPTEN":
+   board.chip["class"]="EMSCRIPTEN"
++elif board.chip["family"]=="WASM":
++  board.chip["class"]="WASM"
+ elif board.chip["family"]=="STM32F1":
+   board.chip["class"]="STM32"
+   codeOut('#include "stm32f10x.h"')
+@@ -360,7 +363,7 @@ if LINUX:
+   bufferSizeIO = 1024
+   bufferSizeTX = 256
+   bufferSizeTimer = 16
+-elif EMSCRIPTEN:
++elif EMSCRIPTEN or WASM:
+   bufferSizeIO = 1024
+   bufferSizeTX = 256
+   bufferSizeTimer = 16

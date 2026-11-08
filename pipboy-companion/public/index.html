@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pip-Boy Companion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=Rajdhani:wght@500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/app.css">
+    <!-- Icons are optional: the app works if this CDN is unreachable. -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.577.0/dist/umd/lucide.min.js" defer></script>
+    <script type="module" src="/js/main.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i data-lucide="radio-tower"></i></div>
+            <h1>PIP-BOY<br>COMPANION</h1>
+            <p>3000 Mark V</p>
+        </div>
+        <nav aria-label="Main" id="navigation">
+            <p class="nav-label">Pip-Boy</p>
+            <div class="nav-list">
+                <button class="nav-btn active" data-page="dashboard"><i data-lucide="house"></i><span>Home</span></button>
+                <button class="nav-btn" data-page="apps"><i data-lucide="grid-2x2"></i><span>Apps</span></button>
+                <button class="nav-btn" data-page="files"><i data-lucide="folder-open"></i><span>Files</span></button>
+                <button class="nav-btn" data-page="personalise"><i data-lucide="id-card"></i><span>ID, lists &amp; notes</span></button>
+                <button class="nav-btn" data-page="pipsettings"><i data-lucide="settings"></i><span>Pip-Boy settings</span></button>
+                <button class="nav-btn" data-page="backup"><i data-lucide="archive-restore"></i><span>Backup &amp; restore</span></button>
+            </div>
+            <p class="nav-label">Companion</p>
+            <div class="nav-list">
+                <button class="nav-btn" data-page="radio"><i data-lucide="radio"></i><span>Radio presets</span></button>
+                <button class="nav-btn" data-page="settings"><i data-lucide="sliders-horizontal"></i><span>App settings profile</span></button>
+                <button class="nav-btn" data-page="workspace"><i data-lucide="hard-drive"></i><span>Workspace</span></button>
+                <button class="nav-btn" data-page="media"><i data-lucide="scan-search"></i><span>Media check</span></button>
+            </div>
+            <p class="nav-label">Help &amp; tools</p>
+            <div class="nav-list">
+                <button class="nav-btn" data-page="logs"><i data-lucide="scroll-text"></i><span>Activity</span></button>
+                <button class="nav-btn" data-page="diagnostics"><i data-lucide="stethoscope"></i><span>Diagnostics</span></button>
+                <button class="nav-btn" data-page="flash"><i data-lucide="triangle-alert"></i><span>Firmware</span></button>
+                <a class="nav-btn" href="/emulator/" target="_blank" rel="noopener"><i data-lucide="monitor-play"></i><span>Emulator</span><i data-lucide="external-link" class="nav-ext"></i></a>
+            </div>
+        </nav>
+        <div class="side-bottom"><strong>● LOCAL STATION</strong>Everything is kept on this computer in <code>data/</code>. Nothing is sent to the internet.</div>
+    </aside>
+    <main class="main" id="main">
+        <header class="topbar">
+            <div class="crumb"><b id="breadcrumb">HOME</b></div>
+            <div class="status" aria-live="polite">
+                <span class="dot" id="status-dot" data-tone="off"></span><span id="connection-status">NOT CONNECTED</span>
+                <button id="device-wake" class="btn secondary small" hidden><i data-lucide="sun"></i> Wake</button>
+                <button id="device-connect" class="btn small"><i data-lucide="plug"></i> Connect</button>
+                <button id="device-disconnect" class="btn secondary small" hidden>Disconnect</button>
+            </div>
+        </header>
+
+        <section id="job" class="job" hidden aria-live="polite" aria-labelledby="job-title">
+            <div class="job-head">
+                <h3 id="job-title">Task</h3><span id="job-state" class="tag warn">IN PROGRESS</span>
+            </div>
+            <ol id="job-steps" class="job-steps"></ol>
+            <progress id="job-progress" class="progress" max="100" value="0" aria-label="Progress of the current step"></progress>
+            <p id="job-message" class="job-message" hidden></p>
+            <details id="job-details" class="job-details" hidden><summary>Technical details</summary><p id="job-detail-text"></p></details>
+            <div class="job-buttons">
+                <div id="job-actions" class="row"></div>
+                <button id="job-cancel" class="btn secondary" type="button">Cancel</button>
+                <button id="job-close" class="btn secondary" type="button" hidden>Close</button>
+            </div>
+        </section>
+
+        <!-- ============================================================ HOME -->
+        <section id="dashboard" class="page active">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Home</div>
+                    <h2>Welcome, vault dweller.</h2>
+                    <p>Install apps, manage files and keep backups of your Pip-Boy, all from here.</p>
+                </div>
+                <div class="row">
+                    <span class="pill" id="record-status">LOADING RECORDS...</span>
+                    <button id="records-retry" class="mini" type="button" hidden>Retry</button>
+                </div>
+            </div>
+            <div id="server-down" class="server-down" role="alert"><strong>The companion server isn’t running.</strong> Saved presets, workspace files and logs need it: run <code>npm start</code> in the project folder, then press Retry. Connecting to the Pip-Boy still works.</div>
+
+            <article id="home-offline" class="panel hero">
+                <div class="hero-text">
+                    <h3>Connect your Pip-Boy</h3>
+                    <ol class="steps">
+                        <li>Plug the Pip-Boy into this computer with its USB cable.</li>
+                        <li>Turn it on and wait for its screen.</li>
+                        <li>Press <b>Connect</b>. The first time, choose the Pip-Boy in the list the browser shows.</li>
+                    </ol>
+                    <p id="home-support" class="help"></p>
+                    <p id="home-error" class="error-text" role="alert" hidden></p>
+                </div>
+                <button id="home-connect" class="btn big"><i data-lucide="plug"></i> Connect</button>
+            </article>
+
+            <div id="home-online" hidden>
+                <article class="panel">
+                    <div class="panel-title"><h3>Your Pip-Boy</h3><button id="home-refresh" class="mini" type="button" data-device>Refresh</button></div>
+                    <div class="facts">
+                        <div><span class="fact-label">Firmware</span><strong id="home-firmware">—</strong></div>
+                        <div><span class="fact-label">SD card</span><strong id="home-sd">—</strong></div>
+                        <div><span class="fact-label">Power</span><strong id="home-power">—</strong></div>
+                        <div class="fact-wide"><span class="fact-label">Storage</span><div id="home-storage"></div></div>
+                    </div>
+                </article>
+                <div class="tiles">
+                    <button class="tile" data-goto="apps"><i data-lucide="download"></i><strong>Install an app</strong><span>One click: copies it over and adds it to the APPS menu</span></button>
+                    <button class="tile" id="home-backup" data-device><i data-lucide="archive"></i><strong>Back up now</strong><span>Save every Storage file to this computer</span></button>
+                    <button class="tile" id="home-free" data-device><i data-lucide="sparkles"></i><strong>Free up space</strong><span>Reclaim the space deleted files still use</span></button>
+                    <button class="tile" data-goto="personalise"><i data-lucide="id-card"></i><strong>ID card &amp; lists</strong><span>Make your INV › ID card, checklists and a feed picture</span></button>
+                    <button class="tile" data-goto="files" data-tab="sd"><i data-lucide="folder-open"></i><strong>Browse the SD card</strong><span>Music, videos, holotapes and more</span></button>
+                    <button class="tile" id="home-restart" data-device><i data-lucide="rotate-ccw"></i><strong>Restart the Pip-Boy</strong><span>Reconnects automatically afterwards</span></button>
+                </div>
+                <article class="panel">
+                    <div class="panel-title"><h3>Send a message</h3><small>POPS UP ON THE PIP-BOY</small></div>
+                    <form id="msg-form" class="row" autocomplete="off">
+                        <div class="field"><label for="msg-text">Message</label><textarea id="msg-text" maxlength="240" rows="2" placeholder="e.g. Dinner’s ready. Leave the wasteland for later."></textarea></div>
+                        <button class="btn" type="submit" id="msg-send" data-device><i data-lucide="send"></i> Send</button>
+                    </form>
+                    <p class="help">It appears over whatever the Pip-Boy is showing. With the Inbox extension it’s also kept in STAT › INBOX.</p>
+                </article>
+            </div>
+
+            <h3 class="section-title">Saved on this computer</h3>
+            <div class="grid">
+                <button class="card" data-goto="radio"><div class="number" id="preset-count">—</div><p>Radio presets</p></button>
+                <button class="card" data-goto="workspace"><div class="number" id="file-count">0</div><p>Workspace files</p></button>
+                <button class="card" data-goto="apps" data-open="app-notes"><div class="number" id="app-count">—</div><p>App notes</p></button>
+            </div>
+        </section>
+
+        <!-- ============================================================ APPS -->
+        <section id="apps" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Pip-Boy</div>
+                    <h2>Apps</h2>
+                    <p>Install opens the app on the Pip-Boy’s APPS menu: the dashboard copies it over, adds the menu entry on the SD card and, if Storage is full, offers to make room first.</p>
+                </div>
+            </div>
+            <div id="apps-catalog" class="app-grid" aria-live="polite"></div>
+            <h3 class="section-title">Extensions for the stock interface</h3>
+            <p class="help mb-18">Extensions add screens to the Pip-Boy’s own interface instead of replacing it, and start each time it does. Holding the torch button while the Pip-Boy starts skips them. A Pip-OS update removes them; install them again afterwards.</p>
+            <div id="loader-notice" class="notice mb-18" hidden>The extension loader on your Pip-Boy has an update (it now scrolls the menu names when extensions add more than fit). <button type="button" id="loader-update" class="btn small" data-device>Update it</button></div>
+            <div id="extensions-catalog" class="app-grid" aria-live="polite"></div>
+            <article class="panel">
+                <div class="panel-title"><h3>Install your own app</h3></div>
+                <p class="help">Choose a JavaScript file written for the Pip-Boy. It’s installed the same way: copied to Storage and added to the APPS menu.</p>
+                <div class="row mt-12"><button id="app-install-own" class="btn secondary" data-device><i data-lucide="file-up"></i> Choose a .js file…</button></div>
+            </article>
+            <article class="panel">
+                <div class="panel-title"><h3>Other apps on your Pip-Boy</h3><small id="apps-other-total"></small></div>
+                <div id="apps-other" class="list"></div>
+            </article>
+            <details id="app-notes" class="panel collapsible">
+                <summary><h3>App notes</h3><small id="apps-total">0 ENTRIES</small></summary>
+                <p class="help">A personal list for keeping track of apps and versions. Notes don’t install anything.</p>
+                <form id="app-form" class="mt-12">
+                    <div class="row">
+                        <div class="field"><label for="app-name">App name</label><input id="app-name" maxlength="70" required placeholder="e.g. Holotape Reader"></div>
+                        <div class="field"><label for="app-version">Version / note</label><input id="app-version" maxlength="70" placeholder="e.g. v1.2"></div>
+                        <button type="submit" class="btn secondary"><i data-lucide="plus"></i> Add note</button>
+                    </div>
+                </form>
+                <div id="apps-list" class="list mt-16"></div>
+            </details>
+        </section>
+
+        <!-- ============================================================ FILES -->
+        <section id="files" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Pip-Boy</div>
+                    <h2>Files</h2>
+                    <p><b>Storage</b> is the Pip-Boy’s built-in memory, holding its firmware, apps and settings. The <b>SD card</b> holds music, videos and other media.</p>
+                </div>
+            </div>
+            <div class="tabs" role="tablist" aria-label="Where the files are">
+                <button role="tab" id="tab-storage" aria-controls="files-storage" aria-selected="true">Storage</button>
+                <button role="tab" id="tab-sd" aria-controls="files-sd" aria-selected="false" tabindex="-1">SD card</button>
+            </div>
+            <article id="files-storage" class="panel tabpanel" role="tabpanel" aria-labelledby="tab-storage">
+                <div id="storage-meter"></div>
+                <div class="toolbar">
+                    <button id="storage-upload" class="btn" data-device><i data-lucide="upload"></i> Upload a file…</button>
+                    <button id="storage-free" class="btn secondary" data-device><i data-lucide="sparkles"></i> Free up space</button>
+                    <button id="storage-refresh" class="btn secondary" data-device><i data-lucide="refresh-cw"></i> Refresh</button>
+                </div>
+                <div id="device-files" class="list mt-16"></div>
+            </article>
+            <article id="files-sd" class="panel tabpanel" role="tabpanel" aria-labelledby="tab-sd" hidden>
+                <div class="toolbar">
+                    <button id="sd-up" class="btn secondary" data-device aria-label="Up one folder"><i data-lucide="arrow-up"></i> Up</button>
+                    <nav id="sd-breadcrumb" class="breadcrumb" aria-label="Current folder"></nav>
+                    <span class="spacer"></span>
+                    <button id="sd-upload" class="btn" data-device><i data-lucide="upload"></i> Upload files…</button>
+                    <button id="sd-mkdir" class="btn secondary" data-device><i data-lucide="folder-plus"></i> New folder</button>
+                    <button id="sd-zip" class="btn secondary" data-device><i data-lucide="download"></i> Download folder</button>
+                    <button id="sd-refresh" class="btn secondary" data-device><i data-lucide="refresh-cw"></i> Refresh</button>
+                </div>
+                <p id="sd-space" class="help" hidden></p>
+                <div id="sd-files" class="list mt-16"></div>
+                <p class="help">Copies over USB run at about 3 KB/s and are checked as they go. For large videos or music a card reader is much faster.</p>
+            </article>
+        </section>
+
+        <!-- ============================================================ PERSONALISE -->
+        <section id="personalise" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Pip-Boy</div>
+                    <h2>ID, lists &amp; notes</h2>
+                    <p>Make the files behind the screens Pip-OS 1.33 added: your ID card (INV › ID), checklists (DATA › LISTS) and your own picture in DATA › FEEDS. They go on the SD card, and the Pip-Boy shows them the next time you open the screen.</p>
+                </div>
+            </div>
+            <div id="pers-firmware" class="notice mb-18" hidden></div>
+
+            <article class="panel">
+                <div class="panel-title"><h3>ID card</h3><small>INV › ID</small></div>
+                <div class="split-media">
+                    <form id="id-form" class="stack" autocomplete="off">
+                        <div class="field"><label for="id-name">Name</label><input id="id-name" maxlength="22" placeholder="e.g. Lucy MacLean"></div>
+                        <div class="row">
+                            <div class="field"><label for="id-room">Room</label><input id="id-room" maxlength="10" placeholder="e.g. 32-B"></div>
+                            <div class="field"><label for="id-vault">Vault</label><input id="id-vault" maxlength="6" placeholder="e.g. 33"></div>
+                        </div>
+                        <div class="row">
+                            <div class="field"><label for="id-dob">Date of birth</label><input id="id-dob" maxlength="12" placeholder="e.g. 10.23.2052"></div>
+                            <div class="field"><label for="id-skill">Skill</label><input id="id-skill" maxlength="16" placeholder="e.g. Archery"></div>
+                        </div>
+                        <div class="toolbar">
+                            <button type="button" id="id-photo" class="btn secondary"><i data-lucide="image"></i> Choose photo…</button>
+                            <button type="button" id="id-photo-clear" class="mini" hidden>Remove photo</button>
+                        </div>
+                        <div class="toolbar mt-12">
+                            <button type="button" id="id-send" class="btn" data-device><i data-lucide="send"></i> Send to Pip-Boy</button>
+                            <button type="button" id="id-load" class="btn secondary" data-device>Load from Pip-Boy</button>
+                        </div>
+                    </form>
+                    <figure class="screen-preview"><canvas id="id-canvas" width="400" height="300" aria-label="Preview of the ID card on the Pip-Boy"></canvas><figcaption>Preview: how it looks on the Pip-Boy</figcaption></figure>
+                </div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-title"><h3>Lists</h3><small>DATA › LISTS</small></div>
+                <p class="help">Checklists you can tick off on the Pip-Boy with the wheel. Load them first to keep what you’ve ticked there.</p>
+                <div class="toolbar mt-12">
+                    <button type="button" id="lists-load" class="btn secondary" data-device><i data-lucide="download"></i> Load from Pip-Boy</button>
+                    <button type="button" id="lists-add" class="btn secondary"><i data-lucide="plus"></i> New list</button>
+                    <span class="spacer"></span>
+                    <button type="button" id="lists-send" class="btn" data-device><i data-lucide="send"></i> Send to Pip-Boy</button>
+                </div>
+                <div id="lists-editor" class="lists-editor mt-16"></div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-title"><h3>Notes</h3><small>DATA › NOTES</small></div>
+                <p class="help">Text notes kept in the SD card’s <code>NOTES</code> folder. Read them on the Pip-Boy with the Notes extension (Apps page). Plain letters, digits and punctuation only: the Pip-Boy’s fonts have no accents.</p>
+                <div class="toolbar mt-12">
+                    <button type="button" id="notes-load" class="btn secondary" data-device><i data-lucide="download"></i> Load from Pip-Boy</button>
+                    <button type="button" id="notes-new" class="btn secondary"><i data-lucide="plus"></i> New note</button>
+                </div>
+                <div class="notes-editor mt-16">
+                    <div id="notes-list" class="list"></div>
+                    <form id="notes-edit" class="stack" hidden autocomplete="off">
+                        <div class="field"><label for="note-title">Title</label><input id="note-title" maxlength="40" placeholder="e.g. Water chip"></div>
+                        <div class="field"><label for="note-body">Text</label><textarea id="note-body" rows="10" maxlength="8000"></textarea></div>
+                        <div class="toolbar">
+                            <button type="submit" id="note-save" class="btn" data-device><i data-lucide="send"></i> Save to Pip-Boy</button>
+                            <button type="button" id="note-delete" class="btn danger" data-device>Delete</button>
+                        </div>
+                    </form>
+                </div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-title"><h3>Feed picture</h3><small>DATA › FEEDS</small></div>
+                <div class="split-media">
+                    <div class="stack">
+                        <p class="help">Any photo becomes a 400 × 248 picture in the Pip-Boy’s four shades of green, shown after the built-in feeds.</p>
+                        <div class="field"><label for="feed-contrast">Contrast</label><input id="feed-contrast" type="range" min="0.6" max="2" step="0.05" value="1.15"></div>
+                        <div class="field"><label for="feed-brightness">Brightness</label><input id="feed-brightness" type="range" min="-0.5" max="0.5" step="0.05" value="0"></div>
+                        <div class="toolbar">
+                            <button type="button" id="feed-pick" class="btn secondary"><i data-lucide="image"></i> Choose picture…</button>
+                        </div>
+                        <div class="toolbar mt-12">
+                            <button type="button" id="feed-send" class="btn" data-device disabled><i data-lucide="send"></i> Send to Pip-Boy</button>
+                            <button type="button" id="feed-remove" class="btn danger" data-device>Remove from Pip-Boy</button>
+                        </div>
+                    </div>
+                    <figure class="screen-preview"><canvas id="feed-canvas" width="400" height="248" aria-label="Preview of the feed picture"></canvas><figcaption id="feed-caption">Choose a picture to see it here</figcaption></figure>
+                </div>
+            </article>
+        </section>
+
+        <!-- ============================================================ PIP-BOY SETTINGS (display colour panel below the form) -->
+        <section id="pipsettings" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Pip-Boy</div>
+                    <h2>Pip-Boy settings</h2>
+                    <p>The Pip-Boy’s own settings (kept in <code>settings.json</code> on its SD card). Changes apply straight away when the stock interface is running.</p>
+                </div>
+            </div>
+            <article class="panel">
+                <div id="ps-empty"></div>
+                <form id="ps-form" hidden>
+                    <div class="settings-grid">
+                        <div class="field"><label for="ps-name">Assigned to</label><input id="ps-name" maxlength="30" placeholder="Shown in DATA › MAINTENANCE › ABOUT"></div>
+                        <div class="field"><label for="ps-idle">Screen turns off after</label><select id="ps-idle"><option value="60000">1 minute</option><option value="120000">2 minutes</option><option value="300000">5 minutes</option><option value="600000">10 minutes</option><option value="1800000">30 minutes</option><option value="3600000">1 hour</option><option value="0">Never</option></select></div>
+                        <div class="field"><label for="ps-clock">Clock</label><select id="ps-clock"><option value="false">24-hour</option><option value="true">12-hour</option></select></div>
+                        <div class="field"><label for="ps-tz">Time zone</label><select id="ps-tz"></select></div>
+                        <div class="field"><label for="ps-fallback">If the mode dial reads between positions</label><select id="ps-fallback"><option value="0">Stay on the current screen (default)</option><option value="1">Go to STAT</option><option value="2">Go to INV</option><option value="3">Go to DATA</option><option value="4">Go to MAP</option><option value="5">Go to RADIO (as before Pip-OS 1.32)</option></select></div>
+                        <div class="field"><span class="fact-label">Clock calibration</span><strong id="ps-rtc" class="fact-value">—</strong></div>
+                    </div>
+                    <p id="ps-clock-state" class="help"></p>
+                    <label class="check mt-12"><input type="checkbox" id="ps-autoclock"> Set the clock to this computer’s time whenever the Pip-Boy connects</label>
+                    <hr class="divider">
+                    <div class="toolbar">
+                        <button type="submit" id="ps-save" class="btn" data-device><i data-lucide="save"></i> Save to Pip-Boy</button>
+                        <button type="button" id="ps-time" class="btn secondary" data-device><i data-lucide="clock"></i> Set clock to this computer’s time</button>
+                        <button type="button" id="ps-reload" class="btn secondary" data-device><i data-lucide="refresh-cw"></i> Reload</button>
+                    </div>
+                </form>
+            </article>
+            <article class="panel" id="ps-colour" hidden>
+                <div class="panel-title"><h3>Display colour</h3><small>STOCK INTERFACE</small></div>
+                <div class="split-media">
+                    <div class="stack">
+                        <div class="swatches" id="ps-presets" role="group" aria-label="Colour presets"></div>
+                        <div class="row">
+                            <div class="field narrow"><label for="ps-col">Custom colour</label><input type="color" id="ps-col" value="#00ff00"></div>
+                        </div>
+                        <div class="field"><label for="ps-scan">Scanline darkness</label><input type="range" id="ps-scan" min="0" max="255" step="1" value="128"></div>
+                        <div class="field"><label for="ps-glow">Scan band glow</label><input type="range" id="ps-glow" min="0" max="255" step="1" value="128"></div>
+                        <div class="toolbar">
+                            <button type="button" id="ps-colour-save" class="btn" data-device><i data-lucide="palette"></i> Apply to Pip-Boy</button>
+                            <button type="button" id="ps-colour-reset" class="btn secondary">Back to green</button>
+                        </div>
+                        <p class="help">The same setting as DATA › MAINTENANCE › Display color. Mojave UI and PIP-OS X use it too when their theme is set to PIP-BOY.</p>
+                    </div>
+                    <figure class="screen-preview"><canvas id="ps-colour-canvas" width="400" height="210" aria-label="Preview of the colour"></canvas><figcaption>Preview, with the scanlines</figcaption></figure>
+                </div>
+            </article>
+        </section>
+
+        <!-- ============================================================ BACKUP -->
+        <section id="backup" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Pip-Boy</div>
+                    <h2>Backup &amp; restore</h2>
+                    <p>Keep copies of the Pip-Boy’s Storage on this computer and put them back with one click.</p>
+                </div>
+            </div>
+            <article class="panel">
+                <div class="panel-title"><h3>Storage backups</h3></div>
+                <p class="help">A backup holds every file in Storage: the firmware, apps and settings (not the SD card). It’s downloaded and also kept here.</p>
+                <div class="toolbar mt-12">
+                    <button id="backup-now" class="btn" data-device><i data-lucide="archive"></i> Back up now</button>
+                    <button id="restore-file" class="btn secondary" data-device><i data-lucide="upload"></i> Restore from a file…</button>
+                </div>
+                <div id="backup-list" class="list mt-16"></div>
+            </article>
+            <article class="panel">
+                <div class="panel-title"><h3>Free up space</h3></div>
+                <p class="help">When you delete or update files, the Pip-Boy keeps using their space until Storage is rewritten. This backs up everything, erases Storage, writes the files back and restarts the Pip-Boy, all in one go (about two minutes).</p>
+                <div class="row mt-12"><button id="backup-free" class="btn secondary" data-device><i data-lucide="sparkles"></i> Free up space</button></div>
+            </article>
+            <article class="panel">
+                <div class="panel-title"><h3>Complete copy</h3><small>FOR THE EMULATOR</small></div>
+                <p class="help">Copies the whole Pip-Boy (device details, every Storage file and the SD card) into <code>data/dumps/</code>, so the emulator can run an exact copy. It can take a while; an interrupted copy can be resumed.</p>
+                <details class="mt-12 options">
+                    <summary>Options</summary>
+                    <div class="row mt-12">
+                        <label class="check"><input id="dump-sd" type="checkbox" checked> Include the SD card</label>
+                        <div class="field narrow"><label for="dump-sd-max">Skip SD files larger than (KB)</label><input id="dump-sd-max" type="number" min="1" max="65536" value="256"></div>
+                    </div>
+                    <p class="help">Larger files are listed in the copy’s manifest so you can copy them from the card with a reader.</p>
+                </details>
+                <div class="row mt-12"><button id="dump-start" class="btn secondary" data-device><i data-lucide="hard-drive-download"></i> Make a complete copy</button></div>
+                <p id="dump-status" class="help" role="status" aria-live="polite"></p>
+                <div id="dump-list" class="list mt-12"></div>
+            </article>
+            <article class="panel">
+                <div class="panel-title"><h3>Companion data</h3></div>
+                <p class="help">Your radio presets, settings profile and app notes from this dashboard. Restoring adds them to what you have (presets you already have are skipped) and is all-or-nothing.</p>
+                <div class="toolbar mt-12">
+                    <button id="export-backup" class="btn secondary"><i data-lucide="download"></i> Download companion data</button>
+                    <label for="backup-file" class="btn secondary"><i data-lucide="upload"></i> Restore companion data…</label><input id="backup-file" class="hidden-input" type="file" accept=".json,application/json">
+                </div>
+                <div id="restore-preview" class="notice mt-16" hidden>
+                    <p id="restore-description"></p>
+                    <div class="row mt-12"><button id="confirm-restore" class="btn">Import</button><button id="cancel-restore" class="btn secondary">Cancel</button></div>
+                </div>
+            </article>
+        </section>
+
+        <!-- ============================================================ RADIO -->
+        <section id="radio" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Companion</div>
+                    <h2>Radio presets</h2>
+                    <p>Your FM stations. Send them to the Pip-Boy as <code>companion-radio.json</code> for apps that read it.</p>
+                </div>
+            </div>
+            <article class="panel">
+                <div class="panel-title"><h3>Add a station</h3></div>
+                <form id="radio-form">
+                    <div class="row">
+                        <div class="field"><label for="station-name">Station name</label><input id="station-name" required maxlength="60" placeholder="e.g. Wasteland Radio"></div>
+                        <div class="field"><label for="station-frequency">Frequency (MHz)</label><input id="station-frequency" type="number" min="87.5" max="108" step="0.1" required placeholder="87.5 – 108.0"></div>
+                        <button type="submit" class="btn"><i data-lucide="plus"></i> Add</button>
+                    </div>
+                </form>
+            </article>
+            <article class="panel">
+                <div class="panel-title"><h3>Saved stations</h3><div class="row"><small id="radio-total">0 PRESETS</small><button id="device-radio" class="btn secondary small" data-device><i data-lucide="send"></i> Send to Pip-Boy</button></div></div>
+                <div id="radio-list" class="list"></div>
+            </article>
+        </section>
+
+        <!-- ============================================================ SETTINGS -->
+        <section id="settings" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Companion</div>
+                    <h2>App settings profile</h2>
+                    <p>A display and audio profile for custom apps that read <code>companion-settings.json</code>. The Pip-Boy’s own settings are on the <a href="#pipsettings" data-goto="pipsettings">Pip-Boy settings</a> page.</p>
+                </div>
+            </div>
+            <article class="panel">
+                <div class="panel-title"><h3>Display &amp; audio</h3><small id="settings-state">DEFAULT PROFILE</small></div>
+                <form id="settings-form">
+                    <div class="settings-grid">
+                        <div class="field"><label for="setting-brightness">Display brightness</label><select id="setting-brightness"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+                        <div class="field"><label for="setting-volume">Audio volume</label><select id="setting-volume"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+                        <div class="field"><label for="setting-theme">Display color</label><select id="setting-theme"><option selected>Phosphor Green</option><option>Amber</option><option>Cool White</option></select></div>
+                        <div class="field"><label for="setting-clock">Clock format</label><select id="setting-clock"><option selected>24-hour</option><option>12-hour</option></select></div>
+                    </div>
+                    <hr class="divider">
+                    <div class="row">
+                        <button type="submit" class="btn"><i data-lucide="save"></i> Save</button>
+                        <button type="button" id="device-settings" class="btn secondary" data-device><i data-lucide="send"></i> Save and send to Pip-Boy</button>
+                        <button type="button" id="export-settings" class="btn secondary"><i data-lucide="download"></i> Download JSON</button>
+                    </div>
+                </form>
+            </article>
+        </section>
+
+        <!-- ============================================================ WORKSPACE -->
+        <section id="workspace" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Companion</div>
+                    <h2>Workspace</h2>
+                    <p>Files kept on this computer (in <code>data/workspace/</code>): backups land here, and you can copy any file to the Pip-Boy’s SD card.</p>
+                </div>
+            </div>
+            <article class="panel">
+                <div class="dropzone" id="workspace-drop"><i data-lucide="folder-up"></i><strong>Add files</strong>
+                    <p>Drop files here or choose them. Characters that can’t be used in names are replaced with <code>_</code>.</p><label for="workspace-files" class="btn">Choose files</label><input id="workspace-files" class="hidden-input" type="file" multiple>
+                </div>
+            </article>
+            <article class="panel">
+                <div class="panel-title"><h3>Files</h3><div class="row"><small id="workspace-total">0 FILES</small><button id="export-manifest" class="mini">Download file list</button></div></div>
+                <div id="workspace-list" class="list"></div>
+            </article>
+        </section>
+
+        <!-- ============================================================ MEDIA -->
+        <section id="media" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Companion</div>
+                    <h2>Media check</h2>
+                    <p>A quick check of file names, types and sizes before you put media on the SD card. It doesn’t guarantee the Pip-Boy can play a file.</p>
+                </div>
+            </div>
+            <article class="panel">
+                <div class="dropzone"><i data-lucide="scan-search"></i><strong>Check media files</strong>
+                    <p>MP3, WAV, OGG, JPG, PNG, MP4 and TXT. Files are checked here and not uploaded.</p><label for="media-files" class="btn">Choose files</label><input id="media-files" class="hidden-input" type="file" multiple>
+                </div>
+            </article>
+            <article class="panel">
+                <div class="panel-title"><h3>Results</h3></div>
+                <div id="validation-summary" class="statline"></div>
+                <div id="media-results" class="list"></div>
+            </article>
+        </section>
+
+        <!-- ============================================================ ACTIVITY -->
+        <section id="logs" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Help &amp; tools</div>
+                    <h2>Activity</h2>
+                    <p>Everything the dashboard did, kept between sessions. Turn on device trace for per-command serial detail.</p>
+                </div>
+            </div>
+            <article class="panel">
+                <div class="row mb-18">
+                    <div class="field"><label for="log-filter">Search</label><input id="log-filter" placeholder="Search activity"></div>
+                    <label class="check"><input id="log-debug" type="checkbox"> Device trace</label>
+                    <button id="export-logs" class="btn secondary"><i data-lucide="download"></i> Download</button>
+                    <button id="clear-logs" class="btn secondary">Clear</button>
+                </div>
+                <div id="log-list" class="log-list"></div>
+            </article>
+        </section>
+
+        <!-- ============================================================ DIAGNOSTICS -->
+        <section id="diagnostics" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Help &amp; tools</div>
+                    <h2>Diagnostics</h2>
+                    <p>For when connecting or a transfer goes wrong. Nothing here is needed day to day.</p>
+                </div>
+            </div>
+            <article class="panel">
+                <div class="panel-title"><h3>Connection</h3><span id="device-badge" class="tag warn">DISCONNECTED</span></div>
+                <p id="device-capability" class="help"></p>
+                <p id="session-summary" class="help"></p>
+                <p id="safe-mode" class="help" role="status">Low-memory safe mode: standby</p>
+                <div class="toolbar mt-12">
+                    <button id="device-choose" class="btn secondary"><i data-lucide="usb"></i> Choose a different port…</button>
+                    <button id="device-diagnostic" class="btn secondary">Test connection</button>
+                    <button id="device-recover" class="btn secondary" title="Sends Ctrl-C, which stops whatever the Pip-Boy is running">Recover console</button>
+                    <button id="safe-clear" class="btn secondary">Clear stuck queue</button>
+                </div>
+                <div class="notice mt-16"><strong>If connecting fails</strong><br>
+                    Make sure no other program (such as the Espruino IDE) or browser tab has the port open, and that the Pip-Boy is on with its screen awake. Unplug and re-plug the cable, then press Connect. <b>Recover console</b> interrupts a program that’s stuck; <b>Test connection</b> only checks the Pip-Boy answers.
+                </div>
+            </article>
+            <article class="panel">
+                <details id="device-diagnostics">
+                    <summary class="clickable"><h3 class="inline">Serial output</h3></summary>
+                    <p id="device-meta" class="help"></p>
+                    <pre id="device-raw" class="raw-log">No serial output captured.</pre>
+                    <button id="device-clear" class="mini mt-12">Clear</button>
+                </details>
+            </article>
+            <article class="panel">
+                <details>
+                    <summary class="clickable"><h3 class="inline">For automation</h3></summary>
+                    <p class="help">Live state for scripts and agents driving this page. The dashboard talks to the Pip-Boy’s Espruino console over USB (Web Serial) only: no Wi-Fi, Bluetooth or cloud. One command runs at a time; every task records one outcome below.</p>
+                    <p id="agent-contract-state" class="help" aria-live="polite"></p>
+                    <p class="help"><strong>Outcomes:</strong> verified, unavailable, timeout, failed, cancelled, disconnected, uncertain-write (stop and inspect before retrying), low-memory-safe-mode (reconnect before retrying). Erasing, restoring, overwriting and deleting always ask first.</p>
+                    <script id="agent-operation-contract-json" type="application/json">{"transport":"USB CDC / Web Serial","target":"connected Pip-Boy Espruino REPL","actions":["Connect","Disconnect","Install app","Remove app","Upload/download/delete Storage file","Browse/upload/download/delete SD files","Back up Storage","Restore Storage","Free up space","Restart","Complete copy (dump)","Test connection","Recover console"],"safety":{"normalReplTransactions":1,"serializedWriters":1,"retryUncertainWrites":false,"flashThroughReplQueue":false,"successRequiresMatchingParsedResponseAndCleanup":true,"confirmationRequired":["restore","erase","overwrite","delete"]},"outcomes":["verified","unavailable","timeout","failed","cancelled","disconnected","uncertain-write","stale-response-discarded","low-memory-safe-mode"]}</script>
+                    <div class="panel-title mt-16"><h4>Status JSON</h4><button id="agent-copy" type="button" class="mini">Copy</button></div>
+                    <pre id="agent-status-json" class="agent-code"></pre>
+                    <p id="agent-copy-result" class="help" role="status"></p>
+                    <h4 class="mt-16">Recent operations</h4>
+                    <div id="agent-action-log" class="agent-action-log">No operations yet.</div>
+                </details>
+            </article>
+        </section>
+
+        <!-- ============================================================ FIRMWARE -->
+        <section id="flash" class="page">
+            <div class="page-head">
+                <div>
+                    <div class="eyebrow">Help &amp; tools</div>
+                    <h2>Firmware</h2>
+                    <p>Updating the Pip-Boy’s firmware is done with the vendor’s tools, not this dashboard. This page helps you prepare and check an image.</p>
+                </div>
+            </div>
+            <article class="panel">
+                <div class="notice"><strong>Back up first.</strong> Flashing can erase all data or make the device unusable. This page never flashes anything.</div>
+                <ol class="help">
+                    <li>Make a Storage backup on the Backup page, and copy your SD card with a card reader.</li>
+                    <li>Get the exact firmware image and instructions from the vendor; check the model and board revision.</li>
+                    <li>Disconnect here, then put the device in bootloader (DFU) mode exactly as the vendor documents.</li>
+                    <li>Flash with the vendor’s recovery tool or <code>dfu-util</code>, and let it verify the image before reconnecting.</li>
+                </ol>
+                <div class="field mt-12"><label for="firmware-file">Check a firmware image (.bin, .hex, .dfu)</label><input type="file" id="firmware-file" accept=".bin,.hex,.dfu"></div>
+                <p id="firmware-info" class="help" role="status">No image selected. The SHA-256 is shown so you can compare it with the vendor’s.</p>
+                <label class="check mt-12"><input id="firmware-confirm" type="checkbox"> I understand flashing may erase data or make this device unusable.</label>
+                <div class="row mt-12"><button id="flash-check" class="btn secondary">Check browser interfaces</button></div>
+                <p id="flash-capability" class="help"></p>
+            </article>
+        </section>
+    </main>
+</div>
+
+<dialog id="dialog" aria-labelledby="dialog-title">
+    <form id="dialog-form" method="dialog">
+        <h3 id="dialog-title"></h3>
+        <div id="dialog-body"></div>
+        <div id="dialog-field" class="field" hidden><label id="dialog-label" for="dialog-input"></label><input id="dialog-input" autocomplete="off"></div>
+        <div class="dialog-buttons"><button id="dialog-cancel" type="button" class="btn secondary">Cancel</button><button id="dialog-ok" type="submit" class="btn">OK</button></div>
+    </form>
+</dialog>
+<div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "pipboy-companion",
+  "version": "1.0.0",
+  "description": "Local companion station for a Pip-Boy 3000 Mark V: persistent records, files and backups, plus Web Serial device tools.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test \"test/*.test.js\" \"emulator/test/*.test.js\"",
+    "test:e2e": "node --test \"test/e2e/*.test.js\"",
+    "test:all": "node --test \"test/*.test.js\" \"test/e2e/*.test.js\" \"emulator/test/*.test.js\"",
+    "emulator": "node emulator/cli.js",
+    "emulator:build": "emulator/build.sh",
+    "apps:build": "apps/mojave/build.sh && apps/pipos-x/build.sh && apps/extensions/build.sh"
+  }
+}

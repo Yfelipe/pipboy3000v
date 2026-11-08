@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Espruino Emulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=Rajdhani:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="web/style.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>Espruino emulator</h1>
+    <label class="field">Board
+      <select id="board"></select>
+    </label>
+    <span id="status" class="status">Starting…</span>
+    <button id="reset" title="reset(): clear RAM, keep Storage">Reset</button>
+    <button id="reboot" title="Power cycle: run the boot code again">Reboot</button>
+    <a class="link" href="/">← Dashboard</a>
+  </header>
+
+  <main class="layout">
+    <section class="device" aria-label="Device">
+      <canvas id="screen" tabindex="0" aria-label="Display. Click, then use the keyboard for the device controls."></canvas>
+      <p class="hint" id="hint">Click the screen to use the keyboard for the controls below.</p>
+      <div id="controls" class="controls"></div>
+    </section>
+
+    <section class="side">
+      <nav class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="console">Console</button>
+        <button role="tab" aria-selected="false" data-tab="program">Program</button>
+        <button role="tab" aria-selected="false" data-tab="load">Load</button>
+      </nav>
+
+      <div class="tab" id="tab-console">
+        <pre id="terminal" class="terminal" aria-label="Espruino console. Click to type."></pre>
+        <div class="row">
+          <button id="ctrl-c" title="Interrupt running code (Ctrl-C)">Ctrl-C</button>
+          <button id="clear-terminal">Clear</button>
+        </div>
+      </div>
+
+      <div class="tab" id="tab-program" hidden>
+        <textarea id="code" spellcheck="false" aria-label="JavaScript program">// Blink LED1 and draw on the screen
+let on = false;
+setInterval(() => {
+  on = !on;
+  digitalWrite(LED1, on);
+}, 500);
+
+g.clear();
+g.setColor(0, 1, 0).setFont("6x8", 2);
+g.drawString("Hello from Espruino", 20, 20);
+</textarea>
+        <div class="row">
+          <button id="run-ram" class="primary" title="Send through the console, like the Web IDE's 'RAM' option">Run in RAM</button>
+          <button id="run-flash" title="require('Storage').write('.bootcde', code), then reboot">Save as boot code &amp; reboot</button>
+        </div>
+        <div class="row">
+          <input id="app-name" value="app.js" aria-label="Storage file name" spellcheck="false">
+          <button id="run-app" title="require('Storage').write(name, code), then load(name)">Save to Storage &amp; load()</button>
+          <label class="button">Open .js…<input id="open-js" type="file" accept=".js,text/javascript" hidden></label>
+        </div>
+        <p class="note">“Run in RAM” resets the interpreter first, then types the program into the REPL.
+          “Save as boot code” stores it in Storage as <code>.bootcde</code>, which runs at every boot (on a loaded
+          dump that replaces the device's firmware until you load the dump again). “Save to Storage &amp; load()” keeps the
+          boot code and runs the file instead, from flash, as <code>load("app.js")</code> does on the device.</p>
+      </div>
+
+      <div class="tab" id="tab-load" hidden>
+        <h2>Device dump</h2>
+        <p class="note">A dump made on the dashboard's Full Mode page: its Storage goes into flash, its SD card files onto the emulated card.</p>
+        <div class="row">
+          <select id="dumps" aria-label="Dumps"><option value="">Loading…</option></select>
+          <button id="load-dump" class="primary">Load dump</button>
+        </div>
+        <label class="button">Load a dump folder from disk…<input id="dump-folder" type="file" webkitdirectory hidden></label>
+
+        <h2>Apps</h2>
+        <p class="note">Apps from the project's <code>apps/</code> folder. Installing writes the app to Storage and runs it with <code>load()</code>; the device's firmware stays in place (on the Pip-Boy app, the power button returns to it).</p>
+        <div id="apps" class="apps"><p class="note">Loading…</p></div>
+
+        <h2>SD card</h2>
+        <p class="note">Copy a folder onto the emulated card, e.g. a copy of the real card to add videos the dump skipped. Files with the same path are replaced.</p>
+        <div class="row">
+          <label class="button">Add folder…<input id="sd-folder" type="file" webkitdirectory hidden></label>
+          <label class="button">Add files…<input id="sd-files" type="file" multiple hidden></label>
+        </div>
+        <p id="sd-summary" class="note"></p>
+
+        <h2>Storage</h2>
+        <p class="note">Write files into flash, as <code>require("Storage").write(name, data)</code>.</p>
+        <label class="button">Add files…<input id="storage-files" type="file" multiple hidden></label>
+        <button id="erase-storage" class="danger">Erase all Storage</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="web/app.js"></script>
+</body>
+</html>
