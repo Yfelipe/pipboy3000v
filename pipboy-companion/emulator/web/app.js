@@ -276,22 +276,30 @@ async function loadDump(label, manifest, readFile) {
   showTab('console');
 }
 
-async function listDumps() {
-  const select = el.dumps;
-  let dumps = null;
+/** The dashboard's saved copies, or null when this page isn't served by the dashboard. */
+async function fetchDumps() {
   try {
     const res = await fetch('/api/dumps');
-    if (res.ok) ({ dumps } = await res.json());
-  } catch {}
-  if (!Array.isArray(dumps)) {
-    // Not served by the companion dashboard: only folder loading is available
-    select.replaceChildren(new Option('Dashboard not available', ''));
-  } else {
-    const usable = dumps?.filter((d) => d.complete);
+    if (!res.ok) return null;
+    const { dumps } = await res.json();
+    return Array.isArray(dumps) ? dumps : null;
+  } catch {
+    return null;
+  }
+}
+
+async function listDumps() {
+  const select = el.dumps;
+  const dumps = await fetchDumps();
+  if (dumps) {
+    const usable = dumps.filter((d) => d.complete);
     select.replaceChildren(...usable.map((d) => new Option(`${d.id} · ${d.version ?? '?'}`, d.id)));
     if (!usable.length) select.replaceChildren(new Option('No complete dumps yet', ''));
     const last = prefs.get('dump');
     if (last && usable.some((d) => d.id === last)) select.value = last;
+  } else {
+    // Not served by the companion dashboard: only folder loading is available
+    select.replaceChildren(new Option('Dashboard not available', ''));
   }
   el.loadDump.disabled = !select.value;
 }
