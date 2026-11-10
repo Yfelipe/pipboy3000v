@@ -7,9 +7,20 @@ import { loadDumpSd, loadDumpStorage } from '../runtime/dump.js';
 import { Terminal } from './terminal.js';
 
 const $ = (id) => document.getElementById(id);
+// Elements used in more than one place, looked up once
+const el = {
+  code: $('code'),
+  board: $('board'),
+  appName: $('app-name'),
+  terminal: $('terminal'),
+  status: $('status'),
+  sdSummary: $('sd-summary'),
+  loadDump: $('load-dump'),
+  dumps: $('dumps'),
+};
 const canvas = $('screen');
 const ctx = canvas.getContext('2d');
-const terminal = new Terminal($('terminal'), (data) => emu?.write(data));
+const terminal = new Terminal(el.terminal, (data) => emu?.write(data));
 
 const modules = new Map(); // board id -> compiled WebAssembly.Module
 let emu = null;
@@ -55,7 +66,7 @@ async function start(boardId, fs = new MemFS()) {
     onPinChange: (pin, level) => showLed(pin, level),
     onReboot: () => terminal.write('\r\n[reboot]\r\n'),
   });
-  $('board').value = board.id;
+  el.board.value = board.id;
   prefs.set('board', board.id);
   canvas.width = emu.lcd.width;
   canvas.height = emu.lcd.height;
@@ -66,8 +77,8 @@ async function start(boardId, fs = new MemFS()) {
 }
 
 function setStatus(text, isError = false) {
-  $('status').textContent = text;
-  $('status').classList.toggle('error', isError);
+  el.status.textContent = text;
+  el.status.classList.toggle('error', isError);
 }
 
 function updateStatus() {
@@ -215,20 +226,20 @@ function sendToRepl(code) {
 
 $('run-ram').addEventListener('click', () => {
   emu.write('\x10reset();\n');
-  sendToRepl($('code').value);
+  sendToRepl(el.code.value);
   showTab('console');
 });
 
 $('run-flash').addEventListener('click', action(() => {
-  emu.storageWrite('.bootcde', $('code').value);
+  emu.storageWrite('.bootcde', el.code.value);
   emu.reboot();
   showTab('console');
 }));
 
 $('run-app').addEventListener('click', action(() => {
-  const name = $('app-name').value.trim();
+  const name = el.appName.value.trim();
   if (!name || name.length > 28 || /["\\]/.test(name)) throw new Error('Storage names are 1 to 28 characters, without quotes');
-  emu.storageWrite(name, $('code').value);
+  emu.storageWrite(name, el.code.value);
   emu.write(`load(${JSON.stringify(name)})\n`);
   showTab('console');
 }));
@@ -236,8 +247,8 @@ $('run-app').addEventListener('click', action(() => {
 $('open-js').addEventListener('change', action(async (e) => {
   const file = e.target.files[0];
   if (file) {
-    $('code').value = await file.text();
-    $('app-name').value = file.name.slice(-28);
+    el.code.value = await file.text();
+    el.appName.value = file.name.slice(-28);
   }
   e.target.value = '';
 }));
@@ -246,7 +257,7 @@ $('reset').addEventListener('click', () => emu.write('reset();\n'));
 $('reboot').addEventListener('click', action(() => emu.reboot()));
 $('ctrl-c').addEventListener('click', () => emu.write('\x03'));
 $('clear-terminal').addEventListener('click', () => terminal.clear());
-$('board').addEventListener('change', action(() => start($('board').value)));
+el.board.addEventListener('change', action(() => start(el.board.value)));
 
 // ---------------------------------------------------------------- dumps, SD card, Storage
 
@@ -265,26 +276,36 @@ async function loadDump(label, manifest, readFile) {
   showTab('console');
 }
 
-async function listDumps() {
-  const select = $('dumps');
+/** The dashboard's saved copies, or null when this page isn't served by the dashboard. */
+async function fetchDumps() {
   try {
     const res = await fetch('/api/dumps');
-    if (!res.ok) throw new Error(res.statusText);
+    if (!res.ok) return null;
     const { dumps } = await res.json();
+    return Array.isArray(dumps) ? dumps : null;
+  } catch {
+    return null;
+  }
+}
+
+async function listDumps() {
+  const select = el.dumps;
+  const dumps = await fetchDumps();
+  if (dumps) {
     const usable = dumps.filter((d) => d.complete);
     select.replaceChildren(...usable.map((d) => new Option(`${d.id} · ${d.version ?? '?'}`, d.id)));
     if (!usable.length) select.replaceChildren(new Option('No complete dumps yet', ''));
     const last = prefs.get('dump');
     if (last && usable.some((d) => d.id === last)) select.value = last;
-  } catch {
+  } else {
     // Not served by the companion dashboard: only folder loading is available
     select.replaceChildren(new Option('Dashboard not available', ''));
   }
-  $('load-dump').disabled = !select.value;
+  el.loadDump.disabled = !select.value;
 }
 
-$('load-dump').addEventListener('click', action(async () => {
-  const id = $('dumps').value;
+el.loadDump.addEventListener('click', action(async () => {
+  const id = el.dumps.value;
   if (!id) return;
   const base = `/api/dumps/${encodeURIComponent(id)}/files/`;
   const readFile = async (rel) => {
@@ -308,6 +329,9 @@ function folderFiles(input) {
   return files;
 }
 
+// Folder pickers: webkitdirectory isn't in the HTML standard (every current browser has it), so it's set here
+for (const id of ['dump-folder', 'sd-folder']) $(id).webkitdirectory = true;
+
 $('dump-folder').addEventListener('change', action(async (e) => {
   const files = folderFiles(e.target);
   const readFile = async (rel) => {
@@ -330,8 +354,8 @@ async function runApp(app) {
   }
   emu.storageWrite(app.storageName, code);
   emu.write(`load(${JSON.stringify(app.storageName)})\n`);
-  $('code').value = code;
-  $('app-name').value = app.storageName;
+  el.code.value = code;
+  el.appName.value = app.storageName;
   showTab('console');
   canvas.focus();
 }
@@ -370,11 +394,11 @@ async function addToSd(entries) {
     emu.fs.writeFile('/' + rel, new Uint8Array(await file.arrayBuffer()));
     count++;
   }
-  $('sd-summary').textContent = `Added ${count} file${count === 1 ? '' : 's'} to the SD card.`;
+  el.sdSummary.textContent = `Added ${count} file${count === 1 ? '' : 's'} to the SD card.`;
 }
 
 function showSdSummary(skipped) {
-  $('sd-summary').textContent = skipped.length
+  el.sdSummary.textContent = skipped.length
     ? `Not in the dump (too large to copy over USB): ${skipped.join(', ')}. Add them from a copy of the card.`
     : '';
 }
@@ -405,13 +429,13 @@ function showTab(name) {
     tab.setAttribute('aria-selected', String(selected));
     $(`tab-${tab.dataset.tab}`).hidden = !selected;
   }
-  if (name === 'console') $('terminal').focus();
+  if (name === 'console') el.terminal.focus();
 }
 for (const tab of document.querySelectorAll('.tabs button')) tab.addEventListener('click', () => showTab(tab.dataset.tab));
 
 // ---------------------------------------------------------------- go
 
-for (const board of Object.values(BOARDS)) $('board').append(new Option(board.name, board.id));
+for (const board of Object.values(BOARDS)) el.board.append(new Option(board.name, board.id));
 listDumps();
 listApps();
 requestAnimationFrame(draw);

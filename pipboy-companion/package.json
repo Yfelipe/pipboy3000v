@@ -15,6 +15,7 @@
     "test:all": "node --test \"test/*.test.js\" \"test/e2e/*.test.js\" \"emulator/test/*.test.js\"",
     "emulator": "node emulator/cli.js",
     "emulator:build": "emulator/build.sh",
+    "vendor": "node scripts/vendor.mjs",
     "apps:build": "apps/mojave/build.sh && apps/pipos-x/build.sh && apps/extensions/build.sh"
   }
 }

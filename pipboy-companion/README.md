@@ -14,6 +14,7 @@ Requirements: **Node.js 22+**. To connect a Pip-Boy, **Chrome or Edge**.
 ```bash
 npm start            # http://localhost:8077
 npm run dev          # same, restarts when server files change
+npm run vendor       # optional: keep the icon library on this computer instead of a CDN
 ```
 
 Open <http://localhost:8077>. Web Serial needs a secure context, and `localhost` counts as one,
@@ -152,6 +153,12 @@ away). Deleting, overwriting, erasing and restoring always ask first.
 - **Clock sync**: each time the Pip-Boy connects, its clock is set to the computer's if it's more
   than 3 seconds out (can be turned off on the Pip-Boy settings page).
 - **SD card space** on Files › SD card (Espruino 2v29's `fs.getFree`).
+- **Dashboard theme** (the palette button in the top bar): Fallout themes (Pip-Boy 3000 Mk V
+  green, Fallout 4, Fallout: New Vegas, The Glow, Vault-Tec, Nuka-Cola, Nuka-Cola Quantum,
+  Institute, Brotherhood of Steel), your own colour (every shade is mixed from it), or your
+  Pip-Boy's screen colour once the Pip-Boy settings page has read it, and scanlines on or off.
+  Kept in this browser; the emulator page follows it. Themes are CSS (`public/css/themes.css`):
+  a theme sets a few base colours and the rest are mixed from them with `color-mix()`.
 - **Backup & restore**: back up now, restore from the list or a file, free up space, complete
   copies, and the companion data export/import.
 - **Diagnostics**: port choice, connection test, console recovery, raw serial output and the
@@ -262,11 +269,18 @@ a similar fake as `navigator.serial`.
 
 - The server binds to `127.0.0.1` and only answers requests whose `Host` is `localhost`,
   `127.0.0.1` or `::1`. That blocks DNS-rebinding attacks from websites you visit.
-- Cross-origin writes are refused (`Origin` check), and every write needs a JSON or explicit
-  content type, which triggers a CORS preflight.
+- Cross-origin writes are refused: the `Origin` header must match, and a browser's
+  `Sec-Fetch-Site` must say `same-origin`. Every write also needs a JSON or explicit content
+  type, which triggers a CORS preflight.
 - There's no authentication. Don't set `HOST=0.0.0.0` on a network you don't trust.
-- The CSP allows scripts only from this server and the lucide icon CDN. Fonts and icons are
-  optional, and the app works offline.
+- The CSP allows scripts only from this server and one pinned version of the lucide icon
+  library on its CDN, which is used only until `npm run vendor` saves a local copy
+  (`public/vendor/`, git-ignored). That keeps third-party code off a page that can reach the
+  Pip-Boy over USB. Fonts and icons are optional, and the app works offline.
+- Names that end up in code on the Pip-Boy (Storage names in `.bootPowerOn`, paths and text in
+  REPL commands) are validated or passed as JSON strings, never pasted in raw.
+- An app's SD card extras (`USER/*.EXT`) are code, like the `USER/*.JS` launchers next to
+  them: anyone who can write to the SD card can already change what the Pip-Boy runs.
 
 ## Changes from the original single-file dashboard
 
