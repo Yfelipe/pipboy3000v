@@ -17,6 +17,7 @@ import { initPipSettings } from './pages/pipsettings.js';
 import { initDeviceState, onDeviceChange, device, connect } from './device/state.js';
 import { initJobs } from './device/jobs.js';
 import { initClockSync } from './device/clocksync.js';
+import { initTheme } from './theme.js';
 
 const LABELS = {
   dashboard: 'Home',
@@ -83,6 +84,7 @@ new MutationObserver((changes) => {
   for (const c of changes) for (const n of c.addedNodes) if (n.nodeType === 1) applyDataStyles(n.parentNode ?? n);
 }).observe(document.body, { childList: true, subtree: true });
 
+initTheme();
 initDeviceState();
 initJobs();
 initClockSync();
@@ -101,6 +103,17 @@ initDeviceBackup();
 navigate(location.hash.slice(1) || 'dashboard', { push: false });
 document.body.dataset.ready = 'true';
 
-// lucide is loaded with `defer`; draw icons once it is available.
-iconRefresh();
-window.addEventListener('load', iconRefresh);
+// Icons (lucide): the local copy that `npm run vendor` saves, else the pinned CDN build. The
+// local copy keeps third-party code off a page that can reach the Pip-Boy over USB.
+const LUCIDE = ['/vendor/lucide.min.js', 'https://cdn.jsdelivr.net/npm/lucide@0.577.0/dist/umd/lucide.min.js'];
+(function loadIcons(i = 0) {
+  const s = document.createElement('script');
+  s.src = LUCIDE[i];
+  const next = () => {
+    s.remove();
+    if (i + 1 < LUCIDE.length) loadIcons(i + 1);
+  };
+  s.onload = () => (globalThis.lucide ? iconRefresh() : next()); // the server sends an empty script when there's no local copy
+  s.onerror = next;
+  document.head.append(s);
+})();

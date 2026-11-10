@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=Rajdhani:wght@500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="web/style.css">
+  <!-- the dashboard's theme (picked there, kept in this browser) -->
+  <link rel="stylesheet" href="/css/themes.css">
+  <script src="/js/theme-boot.js"></script>
 </head>
 <body>
   <header class="bar">
@@ -77,7 +80,7 @@ g.drawString("Hello from Espruino", 20, 20);
           <select id="dumps" aria-label="Dumps"><option value="">Loading…</option></select>
           <button id="load-dump" class="primary">Load dump</button>
         </div>
-        <label class="button">Load a dump folder from disk…<input id="dump-folder" type="file" webkitdirectory hidden></label>
+        <label class="button">Load a dump folder from disk…<input id="dump-folder" type="file" hidden></label>
 
         <h2>Apps</h2>
         <p class="note">Apps from the project's <code>apps/</code> folder. Installing writes the app to Storage and runs it with <code>load()</code>; the device's firmware stays in place (on the Pip-Boy app, the power button returns to it).</p>
@@ -86,7 +89,7 @@ g.drawString("Hello from Espruino", 20, 20);
         <h2>SD card</h2>
         <p class="note">Copy a folder onto the emulated card, e.g. a copy of the real card to add videos the dump skipped. Files with the same path are replaced.</p>
         <div class="row">
-          <label class="button">Add folder…<input id="sd-folder" type="file" webkitdirectory hidden></label>
+          <label class="button">Add folder…<input id="sd-folder" type="file" hidden></label>
           <label class="button">Add files…<input id="sd-files" type="file" multiple hidden></label>
         </div>
         <p id="sd-summary" class="note"></p>

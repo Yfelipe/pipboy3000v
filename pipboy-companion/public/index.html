@@ -8,8 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=Rajdhani:wght@500;600;700&amp;display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/themes.css">
+    <script src="/js/theme-boot.js"></script>
     <!-- Icons are optional: the app works if this CDN is unreachable. -->
-    <script src="https://cdn.jsdelivr.net/npm/lucide@0.577.0/dist/umd/lucide.min.js" defer></script>
     <script type="module" src="/js/main.js"></script>
 </head>
 <body>
@@ -56,6 +57,7 @@
                 <button id="device-wake" class="btn secondary small" hidden><i data-lucide="sun"></i> Wake</button>
                 <button id="device-connect" class="btn small"><i data-lucide="plug"></i> Connect</button>
                 <button id="device-disconnect" class="btn secondary small" hidden>Disconnect</button>
+                <button id="theme-open" class="icon-btn" type="button" title="Dashboard theme" aria-label="Dashboard theme"><i data-lucide="palette"></i></button>
             </div>
         </header>
 
@@ -133,9 +135,9 @@
 
             <h3 class="section-title">Saved on this computer</h3>
             <div class="grid">
-                <button class="card" data-goto="radio"><div class="number" id="preset-count">—</div><p>Radio presets</p></button>
-                <button class="card" data-goto="workspace"><div class="number" id="file-count">0</div><p>Workspace files</p></button>
-                <button class="card" data-goto="apps" data-open="app-notes"><div class="number" id="app-count">—</div><p>App notes</p></button>
+                <button class="card" data-goto="radio"><span class="number" id="preset-count">—</span><span class="card-label">Radio presets</span></button>
+                <button class="card" data-goto="workspace"><span class="number" id="file-count">0</span><span class="card-label">Workspace files</span></button>
+                <button class="card" data-goto="apps" data-open="app-notes"><span class="number" id="app-count">—</span><span class="card-label">App notes</span></button>
             </div>
         </section>
 
@@ -189,7 +191,7 @@
                 <button role="tab" id="tab-storage" aria-controls="files-storage" aria-selected="true">Storage</button>
                 <button role="tab" id="tab-sd" aria-controls="files-sd" aria-selected="false" tabindex="-1">SD card</button>
             </div>
-            <article id="files-storage" class="panel tabpanel" role="tabpanel" aria-labelledby="tab-storage">
+            <section id="files-storage" class="panel tabpanel" role="tabpanel" aria-labelledby="tab-storage">
                 <div id="storage-meter"></div>
                 <div class="toolbar">
                     <button id="storage-upload" class="btn" data-device><i data-lucide="upload"></i> Upload a file…</button>
@@ -197,8 +199,8 @@
                     <button id="storage-refresh" class="btn secondary" data-device><i data-lucide="refresh-cw"></i> Refresh</button>
                 </div>
                 <div id="device-files" class="list mt-16"></div>
-            </article>
-            <article id="files-sd" class="panel tabpanel" role="tabpanel" aria-labelledby="tab-sd" hidden>
+            </section>
+            <section id="files-sd" class="panel tabpanel" role="tabpanel" aria-labelledby="tab-sd" hidden>
                 <div class="toolbar">
                     <button id="sd-up" class="btn secondary" data-device aria-label="Up one folder"><i data-lucide="arrow-up"></i> Up</button>
                     <nav id="sd-breadcrumb" class="breadcrumb" aria-label="Current folder"></nav>
@@ -211,7 +213,7 @@
                 <p id="sd-space" class="help" hidden></p>
                 <div id="sd-files" class="list mt-16"></div>
                 <p class="help">Copies over USB run at about 3 KB/s and are checked as they go. For large videos or music a card reader is much faster.</p>
-            </article>
+            </section>
         </section>
 
         <!-- ============================================================ PERSONALISE -->
@@ -601,6 +603,21 @@
         <div id="dialog-body"></div>
         <div id="dialog-field" class="field" hidden><label id="dialog-label" for="dialog-input"></label><input id="dialog-input" autocomplete="off"></div>
         <div class="dialog-buttons"><button id="dialog-cancel" type="button" class="btn secondary">Cancel</button><button id="dialog-ok" type="submit" class="btn">OK</button></div>
+    </form>
+</dialog>
+<dialog id="theme-dialog" aria-labelledby="theme-title">
+    <form method="dialog">
+        <h3 id="theme-title">Dashboard theme</h3>
+        <p class="help">Colours for this dashboard (this browser only). Now: <strong id="theme-current"></strong>. The Pip-Boy’s own screen colour is on <a href="#pipsettings" data-goto="pipsettings">Pip-Boy settings</a>.</p>
+        <div id="theme-grid" class="theme-grid"></div>
+        <div class="theme-custom">
+            <label class="check" for="theme-color">Your own colour</label>
+            <input type="color" id="theme-color" value="#a7f279" aria-label="Custom theme colour">
+            <button type="button" id="theme-custom-use" class="btn secondary small" aria-pressed="false">Use it</button>
+            <button type="button" id="theme-match" class="btn secondary small" hidden><i id="theme-match-swatch" class="swatch-dot"></i> Match my Pip-Boy’s screen</button>
+            <label class="check"><input type="checkbox" id="theme-scanlines" checked> Scanlines</label>
+        </div>
+        <div class="dialog-buttons"><button id="theme-close" type="button" class="btn">Done</button></div>
     </form>
 </dialog>
 <div id="feedback" class="feedback" role="status" aria-live="polite"></div>

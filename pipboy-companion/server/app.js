@@ -20,7 +20,7 @@ const SECURITY_HEADERS = {
   // Fonts and icons load from public CDNs; everything else is same-origin.
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net", // wasm: the emulator
+    "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net/npm/lucide@0.577.0/", // wasm: the emulator; lucide only when there's no local copy (npm run vendor)
     "style-src 'self' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
@@ -40,6 +40,15 @@ function decodeSegments(raw) {
   }
 }
 
+/** decodeURIComponent for one path segment; malformed % escapes are a 400, not a 500. */
+function decodeSegment(raw) {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    throw new AppError(400, 'validation', 'Malformed path encoding');
+  }
+}
+
 function parseId(value) {
   const id = Number(value);
   if (!Number.isSafeInteger(id) || id < 1 || String(id) !== value) throw new AppError(400, 'validation', 'Invalid id');
@@ -49,7 +58,7 @@ function parseId(value) {
 /** Only answer requests addressed to this machine by name (blocks DNS-rebinding). */
 function hostAllowed(hostHeader, allowedHosts) {
   if (!hostHeader) return false;
-  const host = hostHeader.replace(/:\d+$/, '').replace(/^\[|\]$/g, '').toLowerCase();
+  const host = hostHeader.replace(/:\d+$/, '').replace(/^\[|]$/g, '').toLowerCase();
   return allowedHosts.includes(host);
 }
 
@@ -126,7 +135,7 @@ export async function createApp({
 
     ['GET', /^\/api\/files$/, async (req, res) => sendJson(res, 200, { files: await files.list() })],
     ['GET', /^\/api\/files\/([^/]+)$/, async (req, res, m) => {
-      const { full, info } = await files.stat(decodeURIComponent(m[1]));
+      const { full, info } = await files.stat(decodeSegment(m[1]));
       res.writeHead(200, {
         'Content-Type': 'application/octet-stream',
         'Content-Length': info.size,
@@ -136,31 +145,31 @@ export async function createApp({
       await pipeline(files.openRead(full), res);
     }],
     ['PUT', /^\/api\/files\/([^/]+)$/, async (req, res, m, url) => {
-      const info = await files.save(decodeURIComponent(m[1]), req, {
+      const info = await files.save(decodeSegment(m[1]), req, {
         overwrite: url.searchParams.get('overwrite') === '1',
         declaredLength: Number(req.headers['content-length']),
       });
       sendJson(res, 201, { file: info });
     }],
     ['DELETE', /^\/api\/files\/([^/]+)$/, async (req, res, m) => {
-      await files.remove(decodeURIComponent(m[1]));
+      await files.remove(decodeSegment(m[1]));
       sendNoContent(res);
     }],
 
     ['GET', /^\/api\/dumps$/, async (req, res) => sendJson(res, 200, { dumps: await dumps.list() })],
     ['POST', /^\/api\/dumps$/, async (req, res) => sendJson(res, 201, { dump: await dumps.create() })],
     ['DELETE', /^\/api\/dumps\/([^/]+)$/, async (req, res, m) => {
-      await dumps.remove(decodeURIComponent(m[1]));
+      await dumps.remove(decodeSegment(m[1]));
       sendNoContent(res);
     }],
     ['PUT', /^\/api\/dumps\/([^/]+)\/files\/(.+)$/, async (req, res, m) => {
-      const info = await dumps.save(decodeURIComponent(m[1]), decodeSegments(m[2]), req, {
+      const info = await dumps.save(decodeSegment(m[1]), decodeSegments(m[2]), req, {
         declaredLength: Number(req.headers['content-length']),
       });
       sendJson(res, 201, { file: info });
     }],
     ['GET', /^\/api\/dumps\/([^/]+)\/files\/(.+)$/, async (req, res, m) => {
-      const file = await dumps.open(decodeURIComponent(m[1]), decodeSegments(m[2]));
+      const file = await dumps.open(decodeSegment(m[1]), decodeSegments(m[2]));
       res.writeHead(200, {
         'Content-Type': 'application/octet-stream',
         'Content-Length': file.size,
@@ -184,47 +193,67 @@ export async function createApp({
     }],
   ];
 
-  async function handle(req, res) {
-    for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
-    const url = new URL(req.url, 'http://localhost');
+  /** Answer one request. Errors are thrown (AppError) and answered by handle() below. */
+  async function route(req, res, url) {
     const pathname = url.pathname;
-    try {
-      if (!hostAllowed(req.headers.host, allowedHosts)) {
-        throw new AppError(421, 'host_not_allowed', 'Host not allowed; open the app via localhost');
-      }
-      if (pathname.startsWith('/api/')) {
-        // Browsers always send Origin on cross-site state-changing requests.
-        const origin = req.headers.origin;
-        if (origin && req.method !== 'GET' && req.method !== 'HEAD') {
-          let ok = false;
+    if (!hostAllowed(req.headers.host, allowedHosts)) {
+      throw new AppError(421, 'host_not_allowed', 'Host not allowed; open the app via localhost');
+    }
+    if (pathname.startsWith('/api/')) {
+      // Browsers always send Origin on cross-site state-changing requests, and modern ones
+      // also say where a request came from in Sec-Fetch-Site (refused unless same-origin or
+      // typed by the user). Tools such as curl send neither and are allowed: the server only
+      // listens on this machine.
+      const origin = req.headers.origin;
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        let ok = true;
+        if (origin) {
           try {
             ok = new URL(origin).host === req.headers.host;
-          } catch {}
-          if (!ok) throw new AppError(403, 'origin_not_allowed', 'Cross-origin request refused');
+          } catch {
+            ok = false;
+          }
         }
-        let pathMatched = false;
-        for (const [method, pattern, fn] of routes) {
-          const match = pattern.exec(pathname);
-          if (!match) continue;
-          pathMatched = true;
-          if (method !== req.method) continue;
-          await fn(req, res, match, url);
-          return;
-        }
-        if (pathMatched) throw new AppError(405, 'method_not_allowed', 'Method not allowed');
-        throw new AppError(404, 'not_found', 'Unknown API route');
+        const site = req.headers['sec-fetch-site'];
+        if (site && site !== 'same-origin' && site !== 'none') ok = false;
+        if (!ok) throw new AppError(403, 'origin_not_allowed', 'Cross-origin request refused');
       }
-      if (req.method !== 'GET' && req.method !== 'HEAD') throw new AppError(405, 'method_not_allowed', 'Method not allowed');
-      if (await serveShared(req, res, pathname)) return;
-      if (pathname === '/emulator') {
-        res.writeHead(301, { Location: '/emulator/' });
-        res.end();
+      let pathMatched = false;
+      for (const [method, pattern, fn] of routes) {
+        const match = pattern.exec(pathname);
+        if (!match) continue;
+        pathMatched = true;
+        if (method !== req.method) continue;
+        await fn(req, res, match, url);
         return;
       }
-      if (EMULATOR_PUBLIC.test(pathname) && (await serveEmulator(req, res, pathname))) return;
-      if (/^\/apps\/.*\.(js|json|ext)$/i.test(pathname) && (await serveApps(req, res, pathname))) return;
-      if (await servePublic(req, res, pathname)) return;
-      throw new AppError(404, 'not_found', 'Not found');
+      if (pathMatched) throw new AppError(405, 'method_not_allowed', 'Method not allowed');
+      throw new AppError(404, 'not_found', 'Unknown API route');
+    }
+    if (req.method !== 'GET' && req.method !== 'HEAD') throw new AppError(405, 'method_not_allowed', 'Method not allowed');
+    if (await serveShared(req, res, pathname)) return;
+    if (pathname === '/emulator') {
+      res.writeHead(301, { Location: '/emulator/' });
+      res.end();
+      return;
+    }
+    if (EMULATOR_PUBLIC.test(pathname) && (await serveEmulator(req, res, pathname))) return;
+    if (/^\/apps\/.*\.(js|json|ext)$/i.test(pathname) && (await serveApps(req, res, pathname))) return;
+    if (await servePublic(req, res, pathname)) return;
+    if (pathname === '/vendor/lucide.min.js') {
+      // No local copy of the icons yet (npm run vendor): an empty script, so the page can fall
+      // back to the CDN without an error in the console
+      res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache' });
+      res.end('// No local copy: run `npm run vendor` to keep the icons on this computer.\n');
+      return;
+    }
+    throw new AppError(404, 'not_found', 'Not found');
+  }
+
+  async function handle(req, res) {
+    for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
+    try {
+      await route(req, res, new URL(req.url, 'http://localhost'));
     } catch (err) {
       if (err?.code === 'ERR_STREAM_PREMATURE_CLOSE') return;
       sendError(res, err);

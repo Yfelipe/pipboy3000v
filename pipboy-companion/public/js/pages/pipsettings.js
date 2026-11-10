@@ -91,34 +91,39 @@ async function saveColour() {
     j.finish(how === 'live' ? 'The Pip-Boy is showing the new colour.' : 'Saved. The stock interface uses it from its next start.');
   }, { refresh: false });
   if (r.ok && loaded?.settings) loaded.settings.color = c;
+  if (r.ok) document.dispatchEvent(new CustomEvent('pipboy-colour', { detail: c }));
 }
 
 function render() {
   const form = $('ps-form');
+  const empty = $('ps-empty');
   $('ps-colour').hidden = !(session.connected && loaded?.settings);
   if (!session.connected) {
     form.hidden = true;
-    $('ps-empty').innerHTML = needsConnection('its settings');
+    empty.innerHTML = needsConnection('its settings');
     return;
   }
   if (!loaded) {
     form.hidden = true;
-    $('ps-empty').innerHTML = '<p class="help">Reading the Pip-Boy’s settings…</p>';
+    empty.innerHTML = '<p class="help">Reading the Pip-Boy’s settings…</p>';
     return;
   }
   if (!loaded.settings) {
     form.hidden = true;
-    $('ps-empty').innerHTML =
+    empty.innerHTML =
       '<div class="empty"><strong>No settings found</strong><p>The Pip-Boy keeps its settings in settings.json on the SD card. Check the card is in, then press Reload.</p><button class="btn small mt-12" id="ps-empty-reload">Reload</button></div>';
     return;
   }
-  $('ps-empty').innerHTML = loaded.live
+  empty.innerHTML = loaded.live
     ? ''
     : '<p class="notice mb-18">The stock interface isn’t running (an app is), so changes are written to settings.json and take effect when the Pip-Boy restarts.</p>';
   form.hidden = false;
   if (document.activeElement?.closest('#ps-form')) return; // don't overwrite while editing
   const s = loaded.settings;
-  if (s.color && Number.isFinite(s.color.r)) colour = { ...DEFAULT_COLOR, ...s.color };
+  if (s.color && Number.isFinite(s.color.r)) {
+    colour = { ...DEFAULT_COLOR, ...s.color };
+    document.dispatchEvent(new CustomEvent('pipboy-colour', { detail: colour })); // the dashboard theme can match it
+  }
   drawColour();
   $('ps-autoclock').checked = clockSyncEnabled();
   $('ps-name').value = s.userName ?? '';
@@ -183,16 +188,17 @@ async function setClock() {
 }
 
 export function initPipSettings() {
-  $('ps-presets').innerHTML = COLOR_PRESETS.map((p, i) => `<button type="button" class="swatch" data-preset="${i}" aria-pressed="false"><i data-colour="${hex(p.color)}"></i>${p.name}</button>`).join('');
-  $('ps-presets').addEventListener('click', (e) => {
+  const presets = $('ps-presets');
+  presets.innerHTML = COLOR_PRESETS.map((p, i) => `<button type="button" class="swatch" data-preset="${i}" aria-pressed="false"><i data-colour="${hex(p.color)}"></i>${p.name}</button>`).join('');
+  presets.addEventListener('click', (e) => {
     const b = e.target.closest('[data-preset]');
     if (!b) return;
     colour = { ...colour, ...COLOR_PRESETS[b.dataset.preset].color };
     drawColour();
   });
   $('ps-col').addEventListener('input', (e) => { colour = { ...colour, ...fromHex(e.target.value) }; drawColour(); });
-  $('ps-scan').addEventListener('input', (e) => { colour.scanline = Number(e.target.value); drawColour(); });
-  $('ps-glow').addEventListener('input', (e) => { colour.overscan = Number(e.target.value); drawColour(); });
+  $('ps-scan').addEventListener('input', (e) => { colour = { ...colour, scanline: Number(e.target.value) }; drawColour(); });
+  $('ps-glow').addEventListener('input', (e) => { colour = { ...colour, overscan: Number(e.target.value) }; drawColour(); });
   $('ps-colour-reset').addEventListener('click', () => { colour = { ...DEFAULT_COLOR }; drawColour(); });
   $('ps-colour-save').addEventListener('click', saveColour);
   $('ps-autoclock').addEventListener('change', (e) => setClockSync(e.target.checked));

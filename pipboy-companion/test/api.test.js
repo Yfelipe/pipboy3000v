@@ -104,6 +104,15 @@ describe('request guards', () => {
     assert.equal(res.status, 403);
     const same = await json('POST', '/api/records', { kind: 'app', name: 'same-origin', payload: {} }, { Origin: base });
     assert.equal(same.status, 201);
+    // no Origin, but the browser says it came from another site
+    const site = await request('DELETE', '/api/logs', { headers: { 'Sec-Fetch-Site': 'cross-site' } });
+    assert.equal(site.status, 403);
+    assert.equal((await request('DELETE', '/api/logs', { headers: { 'Sec-Fetch-Site': 'same-origin', Origin: base } })).status, 204);
+  });
+
+  test('malformed % escapes in a path are a 400, not a server error', async () => {
+    assert.equal((await request('GET', '/api/files/%E0%A4%A')).status, 400);
+    assert.equal((await request('DELETE', '/api/dumps/%zz')).status, 400);
   });
 
   test('requires JSON content type and valid JSON', async () => {

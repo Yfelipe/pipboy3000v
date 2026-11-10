@@ -461,6 +461,16 @@ export const startAppCode = (name) =>
 
 /** Make `storageName` the app that opens at power-on, or pass null to go back to the stock interface. */
 export async function setStartApp(storageName, title) {
+  // The name goes into code (.bootPowerOn): only plain Storage names, so a file on the device
+  // with a crafted name can't add code of its own
+  if (storageName) {
+    try {
+      validateStorageName(storageName);
+    } catch (e) {
+      notify(`${storageName} can’t be opened at power-on: ${e.message}`, true);
+      return null;
+    }
+  }
   if (!(await ensureConnected())) return null;
   if (device.info?.startApp === '') {
     notify('The Pip-Boy has a .bootPowerOn file that isn’t the companion’s, so it’s left alone. Delete it on the Files page to use this.', true);

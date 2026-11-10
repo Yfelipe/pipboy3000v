@@ -23,7 +23,7 @@ export const IDE_WRITE_CHUNK = 19;
 export const IDE_WRITE_PAUSE_MS = 50;
 export const USB_WRITE_CHUNK = 512;
 /** Logged on connect, so the activity log shows which dashboard code ran (bump on changes). */
-export const CLIENT_VERSION = '2026-11-08.8';
+export const CLIENT_VERSION = '2026-11-10.1';
 /** Sent after every command so the device releases the previous command's reply. */
 export const RELEASE_LINE = '\x10print("")\n';
 /** The Pip-Boy sends one packet of this many bytes (or fewer) per line it runs. */
@@ -594,15 +594,20 @@ export class SerialSession {
    */
   async probeWake() {
     const expression = '(function(){return new Array(401).join("x")})()';
+    let failure = null;
     try {
       const value = await this.transaction(expression, 'probe', { timeout: 800, replyBytes: 400 });
-      if (typeof value !== 'string' || value.length !== 400) throw new Error('unexpected probe reply');
+      if (typeof value !== 'string' || value.length !== 400) failure = 'unexpected probe reply';
+    } catch (e) {
+      failure = e.message.split(' · ')[0];
+    }
+    if (!failure) {
       this.wakeMode = 'timer';
       this.#log('info', 'Wake probe: device timers release output · using timer mode for transfers');
-    } catch (e) {
+    } else {
       this.wakeMode = 'release';
       if (this.lastRequestId) this.ignoredRequestIds.add(this.lastRequestId);
-      this.#log('info', `Wake probe: timers did not release the reply (${e.message.split(' · ')[0]}) · using release commands`);
+      this.#log('info', `Wake probe: timers did not release the reply (${failure}) · using release commands`);
       // Drain the probe's withheld reply so it doesn't show up later.
       try {
         await this.send(RELEASE_LINE.repeat(14));

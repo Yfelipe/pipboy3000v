@@ -9,7 +9,7 @@ The companion connects over USB Web Serial, manages Pip-Boy apps and files, main
 | Path | Description |
 | --- | --- |
 | [`.bootcde.js`](./.bootcde.js) | Decoded device-side firmware artifact. |
-| [`pipboy-companion/`](./pipboy-companion/) | Local dashboard, serial tools, apps, emulator, tests, and development tooling. |
+| [`pipboy-companion/`](./pipboy-companion) | Local dashboard, serial tools, apps, emulator, tests, and development tooling. |
 
 ## Quick start
 
@@ -66,6 +66,10 @@ Messages sent from Home appear over the stock interface, are saved for the Inbox
 
 Display-colour controls include presets, custom colours, and a scanline preview. When a device connects, the companion corrects its clock when it is more than three seconds out, unless clock synchronization is disabled.
 
+### Dashboard themes
+
+The palette button in the top bar opens the theme picker. It has Fallout themes (Pip-Boy 3000 Mk V green, Fallout 4, Fallout: New Vegas, The Glow, Vault-Tec, Nuka-Cola, Nuka-Cola Quantum, Institute and Brotherhood of Steel), your own colour, and a **Match my Pip-Boy's screen** option once the Pip-Boy settings page has read the device's display colour. Scanlines can be turned off. The choice is kept in the browser, and the emulator page follows it. Themes live in [`pipboy-companion/public/css/themes.css`](./pipboy-companion/public/css/themes.css).
+
 ### Diagnostics and serial communication
 
 Diagnostics provides port selection, connection tests, console recovery, raw serial output, and live status JSON for automation or troubleshooting.
@@ -100,6 +104,7 @@ Run these commands from `pipboy-companion/`:
 | `npm start` | Start the dashboard at <http://localhost:8077>. |
 | `npm run dev` | Start the dashboard and restart when server files change. |
 | `npm run apps:build` | Build minified dashboard-installed apps and extensions. |
+| `npm run vendor` | Save the icon library to `public/vendor/` so the dashboard doesn't load it from a CDN. |
 | `npm test` | Run unit, integration, and emulator tests. |
 | `npm run test:e2e` | Run browser tests when Playwright is available. |
 | `npm run test:all` | Run the full test suite. |
@@ -135,7 +140,7 @@ If a dump is interrupted, the manifest records `"complete": false` and an abort 
 
 ## Security
 
-By default, the server binds to `127.0.0.1`, accepts requests only for `localhost`, `127.0.0.1`, or `::1`, rejects cross-origin writes through Origin checks, and requires suitable content types for writes. There is no authentication.
+By default, the server binds to `127.0.0.1`, accepts requests only for `localhost`, `127.0.0.1`, or `::1`, rejects cross-origin writes through `Origin` and `Sec-Fetch-Site` checks, and requires suitable content types for writes. There is no authentication. Run `npm run vendor` once to serve the icon library locally, so no third-party script runs on a page that can reach the Pip-Boy over USB.
 
 Do not set `HOST=0.0.0.0` on an untrusted network.
 

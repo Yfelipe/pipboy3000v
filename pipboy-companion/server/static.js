@@ -1,4 +1,5 @@
 import { promises as fs, createReadStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
 
 const TYPES = {
@@ -50,7 +51,8 @@ export function createStaticHandler(root, prefix = '/') {
       res.end();
       return true;
     }
-    createReadStream(full).pipe(res);
+    // pipeline, not pipe: a read error (the file vanished after stat) must not crash the server
+    pipeline(createReadStream(full), res).catch(() => res.destroy());
     return true;
   };
 }

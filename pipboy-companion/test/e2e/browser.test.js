@@ -553,6 +553,34 @@ describe('browser end-to-end', { skip: chromium ? false : 'playwright is not ins
     await context.close();
   });
 
+  test('Dashboard theme: pick a Fallout theme or your own colour; it is kept after a reload', async () => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await open(page, '#dashboard');
+    const theme = () => page.evaluate(() => [document.documentElement.dataset.theme ?? null, getComputedStyle(document.documentElement).getPropertyValue('--green').trim()]);
+    assert.deepEqual(await theme(), [null, '#a7f279']);
+    await page.click('#theme-open');
+    await page.click('[data-theme-id="fo4"]');
+    assert.deepEqual(await theme(), ['fo4', '#3dff7a']);
+    assert.equal(await page.getAttribute('[data-theme-id="fo4"]', 'aria-pressed'), 'true');
+    await page.click('#theme-close');
+    await page.reload();
+    await page.waitForSelector('body[data-ready="true"]');
+    assert.deepEqual(await theme(), ['fo4', '#3dff7a'], 'kept in this browser');
+    // your own colour: every shade follows it
+    await page.click('#theme-open');
+    await page.fill('#theme-color', '#ff00ff');
+    assert.deepEqual(await theme(), ['custom', '#ff00ff']);
+    const panel = await page.evaluate(() => getComputedStyle(document.querySelector('.panel')).backgroundColor);
+    assert.match(panel, /^rgb\((\d+), (\d+), (\d+)\)$/);
+    const [r, g, b] = panel.match(/\d+/g).map(Number);
+    assert.ok(r > g && b > g, `panel tinted magenta: ${panel}`);
+    // scanlines off
+    await page.uncheck('#theme-scanlines');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body, '::before').opacity), '0');
+    await context.close();
+  });
+
   test('no uncaught page errors', () => {
     assert.deepEqual(pageErrors, []);
   });

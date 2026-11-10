@@ -10,7 +10,7 @@ function render() {
   const visible = shown.slice(0, RENDER_LIMIT);
   $('log-list').innerHTML = visible.length
     ? visible
-        .map((x) => `<div class="log-entry"><time datetime="${x.at}">${new Date(x.at).toLocaleString()}</time><span>${escapeHtml(x.message)}</span></div>`)
+        .map((x) => `<div class="log-entry"><time datetime="${escapeHtml(x.at)}">${new Date(x.at).toLocaleString()}</time><span>${escapeHtml(x.message)}</span></div>`)
         .join('') + (shown.length > RENDER_LIMIT ? `<p class="help">Showing newest ${RENDER_LIMIT} of ${shown.length}. Export for the full list.</p>` : '')
     : empty('No matching activity', 'Actions will appear here and are kept between sessions.');
   iconRefresh();
