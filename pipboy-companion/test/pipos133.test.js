@@ -8,7 +8,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SerialSession } from '../public/js/serial/session.js';
 import { expr } from '../public/js/serial/protocol.js';
-import * as ops from '../public/js/serial/device-ops.js';
 import { pack2bpp, unpack2bpp, dither, quantize, normaliseLists, FEED, palettes } from '../public/js/pipimage.js';
 import { Espruino } from '../emulator/runtime/espruino.js';
 import { BOARDS } from '../emulator/runtime/boards.js';
@@ -64,7 +63,7 @@ test('emulator: Pip.blitFile copies rows of a raw image file into a Graphics buf
   emu.write('var b=Graphics.createArrayBuffer(400,4,2,{msb:true});var f=E.openFile("IMG.img","r");' +
     'Pip.blitFile(b,f,{y:3,height:4,srcWidth:400,srcHeight:5});f.close();print("R="+JSON.stringify([].slice.call(new Uint8Array(b.buffer))))\n');
   await sleep(300);
-  const got = JSON.parse(/R=(\[.*?\])/.exec(out)[1]);
+  const got = JSON.parse(/R=(\[.*?])/.exec(out)[1]);
   assert.deepEqual(got.slice(0, 200), [...img.slice(300, 500)]); // rows 3 and 4
   assert.ok(got.slice(200).every((v) => v === 0), 'rows past srcHeight are cleared');
   emu.stop();
@@ -166,6 +165,11 @@ test('Pip-OS 1.33 firmware: media remote, radio presets, notes, the scrolling he
   const fs = new MemFS();
   await loadDumpSd(manifest, rd, fs);
   fs.writeFile('/NOTES/Water_chip.txt', new TextEncoder().encode('The water chip has failed.\n\nTry Vault 15.'));
+  // a holotape on the SD card, as the dashboard copies it (apps/index.json "holotapes")
+  fs.mkdirp('/USER');
+  fs.mkdirp('/APPINFO');
+  fs.writeFile('/USER/HACKING.JS', await readFile(path.join(ROOT, 'apps/holotapes/sd/USER/HACKING.JS')));
+  fs.writeFile('/APPINFO/HACKING.json', await readFile(path.join(ROOT, 'apps/holotapes/sd/APPINFO/HACKING.json')));
   let out = '';
   const emu = await Espruino.start({ board: BOARDS.pipboy, wasm: await wasm(), fs, onOutput: (x) => { out += x; } });
   t.after(() => emu.stop());
@@ -200,6 +204,14 @@ test('Pip-OS 1.33 firmware: media remote, radio presets, notes, the scrolling he
   // notes
   const notes = await run('(function(){var got,s=E.showMenu;E.showMenu=function(m){got=Object.keys(m)};MODEINFO[3].submenu.NOTES();E.showMenu=s;return got})()');
   assert.deepEqual(notes, ['', 'WATER CHIP']);
+  // holotapes: INV > APPS lists the file and runs it on the firmware's page buffer. The menu shows
+  // the APPINFO name when the firmware can read that folder, and the file's own name otherwise.
+  const apps = await run('(function(){var got,s=E.showMenu;E.showMenu=function(m){got=m};submenuApps();E.showMenu=s;var k=Object.keys(got).filter(function(n){return /HACKING/.test(n)});got[k[0]]();return k})()');
+  assert.equal(apps.length, 1, JSON.stringify(apps));
+  await sleep(300);
+  assert.equal(await run('(function(){Pip.emit("knob1",-1);Pip.emit("knob1",0);return typeof Pip.removeSubmenu})()'), 'function');
+  await sleep(300);
+  await run('(Pip.removeSubmenu(),delete Pip.removeSubmenu,1)');
   // the header scrolls instead of failing when a tab has more names than fit
   assert.equal(await run('(function(){sm0=5;drawHeader(3);sm0=0;drawHeader(3);return 1})()'), 1);
   assert.doesNotMatch(out, /Uncaught|failed:/);

@@ -1,0 +1,438 @@
+{
+  "format": "pipboy-dump",
+  "version": 1,
+  "tool": "pipboy-companion starter (scripts/build-starter.mjs)",
+  "created_at": "2026-11-01T12:00:00.000Z",
+  "complete": true,
+  "starter": true,
+  "device": {
+    "env": {
+      "VERSION": "2v29.400",
+      "BOARD": "PIPBOY",
+      "STORAGE": 131072
+    },
+    "starter": true
+  },
+  "storage": [
+    {
+      "name": ".bootcde",
+      "file": "storage/bootcde.js",
+      "size": 5395
+    },
+    {
+      "name": "mojave.min.js",
+      "file": "storage/mojave.min.js",
+      "size": 26061
+    },
+    {
+      "name": "pipos-x.min.js",
+      "file": "storage/pipos-x.min.js",
+      "size": 25601
+    },
+    {
+      "name": "capital.min.js",
+      "file": "storage/capital.min.js",
+      "size": 25235
+    },
+    {
+      "name": "pip2000.min.js",
+      "file": "storage/pip2000.min.js",
+      "size": 24184
+    },
+    {
+      "name": "endurance.min.js",
+      "file": "storage/endurance.min.js",
+      "size": 26126
+    },
+    {
+      "name": "tars.min.js",
+      "file": "storage/tars.min.js",
+      "size": 25011
+    },
+    {
+      "name": "companion-radio.json",
+      "file": "storage/companion-radio.json",
+      "size": 137
+    }
+  ],
+  "sd": {
+    "included": true,
+    "entries": [
+      {
+        "path": "/ALARM",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/APPINFO",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/CLOCK",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/ENDURANC",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/LEVELUP",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/BOOT",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/DATA",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/INV",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/LOGS",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/MAP",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/MISC",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/NOTES",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/RADIO",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/STAT",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/UI",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/USER",
+        "dir": true,
+        "size": 0
+      },
+      {
+        "path": "/settings.json",
+        "dir": false,
+        "size": 212,
+        "file": "sd/settings.json"
+      },
+      {
+        "path": "/USER/MOJAVE.JS",
+        "dir": false,
+        "size": 23,
+        "file": "sd/USER/MOJAVE.JS"
+      },
+      {
+        "path": "/USER/MOJAVE.EXT",
+        "dir": false,
+        "size": 4889,
+        "file": "sd/USER/MOJAVE.EXT"
+      },
+      {
+        "path": "/USER/PIPOSX.JS",
+        "dir": false,
+        "size": 24,
+        "file": "sd/USER/PIPOSX.JS"
+      },
+      {
+        "path": "/USER/PIPOSX.EXT",
+        "dir": false,
+        "size": 5436,
+        "file": "sd/USER/PIPOSX.EXT"
+      },
+      {
+        "path": "/USER/CAPITAL.JS",
+        "dir": false,
+        "size": 24,
+        "file": "sd/USER/CAPITAL.JS"
+      },
+      {
+        "path": "/USER/CAPITAL.EXT",
+        "dir": false,
+        "size": 4889,
+        "file": "sd/USER/CAPITAL.EXT"
+      },
+      {
+        "path": "/USER/PIP2000.JS",
+        "dir": false,
+        "size": 24,
+        "file": "sd/USER/PIP2000.JS"
+      },
+      {
+        "path": "/USER/PIP2000.EXT",
+        "dir": false,
+        "size": 4889,
+        "file": "sd/USER/PIP2000.EXT"
+      },
+      {
+        "path": "/USER/ENDURANC.JS",
+        "dir": false,
+        "size": 26,
+        "file": "sd/USER/ENDURANC.JS"
+      },
+      {
+        "path": "/USER/ENDURANC.EXT",
+        "dir": false,
+        "size": 4889,
+        "file": "sd/USER/ENDURANC.EXT"
+      },
+      {
+        "path": "/ENDURANC/TITLE.IMG",
+        "dir": false,
+        "size": 4000,
+        "file": "sd/ENDURANC/TITLE.IMG"
+      },
+      {
+        "path": "/ENDURANC/GARGANTU.IMG",
+        "dir": false,
+        "size": 18400,
+        "file": "sd/ENDURANC/GARGANTU.IMG"
+      },
+      {
+        "path": "/ENDURANC/MURPH.IMG",
+        "dir": false,
+        "size": 9660,
+        "file": "sd/ENDURANC/MURPH.IMG"
+      },
+      {
+        "path": "/USER/TARS.JS",
+        "dir": false,
+        "size": 21,
+        "file": "sd/USER/TARS.JS"
+      },
+      {
+        "path": "/USER/TARS.EXT",
+        "dir": false,
+        "size": 4889,
+        "file": "sd/USER/TARS.EXT"
+      },
+      {
+        "path": "/STAT/VB01.avi",
+        "dir": false,
+        "size": 50522,
+        "file": "sd/STAT/VB01.avi"
+      },
+      {
+        "path": "/STAT/VB02.avi",
+        "dir": false,
+        "size": 49868,
+        "file": "sd/STAT/VB02.avi"
+      },
+      {
+        "path": "/STAT/VB03.avi",
+        "dir": false,
+        "size": 50556,
+        "file": "sd/STAT/VB03.avi"
+      },
+      {
+        "path": "/STAT/VB04.avi",
+        "dir": false,
+        "size": 54192,
+        "file": "sd/STAT/VB04.avi"
+      },
+      {
+        "path": "/STAT/VB05.avi",
+        "dir": false,
+        "size": 56422,
+        "file": "sd/STAT/VB05.avi"
+      },
+      {
+        "path": "/STAT/VB06.avi",
+        "dir": false,
+        "size": 48784,
+        "file": "sd/STAT/VB06.avi"
+      },
+      {
+        "path": "/STAT/VB07.avi",
+        "dir": false,
+        "size": 48562,
+        "file": "sd/STAT/VB07.avi"
+      },
+      {
+        "path": "/STAT/VB08.avi",
+        "dir": false,
+        "size": 34610,
+        "file": "sd/STAT/VB08.avi"
+      },
+      {
+        "path": "/STAT/VB09.avi",
+        "dir": false,
+        "size": 57746,
+        "file": "sd/STAT/VB09.avi"
+      },
+      {
+        "path": "/STAT/VB10.avi",
+        "dir": false,
+        "size": 50856,
+        "file": "sd/STAT/VB10.avi"
+      },
+      {
+        "path": "/STAT/VB11.avi",
+        "dir": false,
+        "size": 49736,
+        "file": "sd/STAT/VB11.avi"
+      },
+      {
+        "path": "/USER/HACKING.JS",
+        "dir": false,
+        "size": 2335,
+        "file": "sd/USER/HACKING.JS"
+      },
+      {
+        "path": "/APPINFO/HACKING.json",
+        "dir": false,
+        "size": 43,
+        "file": "sd/APPINFO/HACKING.json"
+      },
+      {
+        "path": "/USER/LOCKPICK.JS",
+        "dir": false,
+        "size": 1975,
+        "file": "sd/USER/LOCKPICK.JS"
+      },
+      {
+        "path": "/APPINFO/LOCKPICK.json",
+        "dir": false,
+        "size": 39,
+        "file": "sd/APPINFO/LOCKPICK.json"
+      },
+      {
+        "path": "/USER/CAPS.JS",
+        "dir": false,
+        "size": 1710,
+        "file": "sd/USER/CAPS.JS"
+      },
+      {
+        "path": "/APPINFO/CAPS.json",
+        "dir": false,
+        "size": 37,
+        "file": "sd/APPINFO/CAPS.json"
+      },
+      {
+        "path": "/USER/FMSCAN.JS",
+        "dir": false,
+        "size": 2486,
+        "file": "sd/USER/FMSCAN.JS"
+      },
+      {
+        "path": "/APPINFO/FMSCAN.json",
+        "dir": false,
+        "size": 33,
+        "file": "sd/APPINFO/FMSCAN.json"
+      },
+      {
+        "path": "/USER/CLOCK.JS",
+        "dir": false,
+        "size": 1564,
+        "file": "sd/USER/CLOCK.JS"
+      },
+      {
+        "path": "/APPINFO/CLOCK.json",
+        "dir": false,
+        "size": 36,
+        "file": "sd/APPINFO/CLOCK.json"
+      },
+      {
+        "path": "/CLOCK/VAULTTEC.IMG",
+        "dir": false,
+        "size": 4980,
+        "file": "sd/CLOCK/VAULTTEC.IMG"
+      },
+      {
+        "path": "/CLOCK/ROBCO.IMG",
+        "dir": false,
+        "size": 5640,
+        "file": "sd/CLOCK/ROBCO.IMG"
+      },
+      {
+        "path": "/CLOCK/NUKACOLA.IMG",
+        "dir": false,
+        "size": 3960,
+        "file": "sd/CLOCK/NUKACOLA.IMG"
+      },
+      {
+        "path": "/USER/LEVELUP.JS",
+        "dir": false,
+        "size": 1807,
+        "file": "sd/USER/LEVELUP.JS"
+      },
+      {
+        "path": "/APPINFO/LEVELUP.json",
+        "dir": false,
+        "size": 35,
+        "file": "sd/APPINFO/LEVELUP.json"
+      },
+      {
+        "path": "/LEVELUP/VAULTBOY.IMG",
+        "dir": false,
+        "size": 4175,
+        "file": "sd/LEVELUP/VAULTBOY.IMG"
+      },
+      {
+        "path": "/LEVELUP/LEVELUP.WAV",
+        "dir": false,
+        "size": 31852,
+        "file": "sd/LEVELUP/LEVELUP.WAV"
+      },
+      {
+        "path": "/USER/customLists.json",
+        "dir": false,
+        "size": 483,
+        "file": "sd/USER/customLists.json"
+      },
+      {
+        "path": "/USER/CHAR.json",
+        "dir": false,
+        "size": 38,
+        "file": "sd/USER/CHAR.json"
+      },
+      {
+        "path": "/USER/MESSAGES.json",
+        "dir": false,
+        "size": 143,
+        "file": "sd/USER/MESSAGES.json"
+      },
+      {
+        "path": "/NOTES/Welcome.txt",
+        "dir": false,
+        "size": 443,
+        "file": "sd/NOTES/Welcome.txt"
+      },
+      {
+        "path": "/NOTES/Controls.txt",
+        "dir": false,
+        "size": 130,
+        "file": "sd/NOTES/Controls.txt"
+      }
+    ]
+  },
+  "errors": []
+}

@@ -1,0 +1,1 @@
+load("capital.min.js");

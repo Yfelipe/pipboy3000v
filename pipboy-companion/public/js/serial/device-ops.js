@@ -2,6 +2,21 @@
 import { expr, bytesToBase64, base64ToBytes, byteChecksum } from './protocol.js';
 import { validateStorageName, validateSdPath, sdJoin, encodeStorageFileName, crc32 } from '../../../shared/validate.js';
 
+/** The Storage file that holds Pip-OS. Without it the Pip-Boy has no stock interface. */
+export const FIRMWARE_FILE = '.bootcde';
+/** Do these [name, bytes] entries leave out the firmware? */
+export const lacksFirmware = (entries) => !entries.some(([name]) => name === FIRMWARE_FILE);
+
+/**
+ * Erasing is only for a board that says it's a Pip-Boy. Connecting accepts a device that
+ * reports no board name at all, which is fine for reading but not for wiping its Storage.
+ */
+export function requirePipBoy(session) {
+  if (session.board !== 'PIPBOY') {
+    throw new Error('This device didn’t report that it’s a Pip-Boy, so its Storage won’t be erased');
+  }
+}
+
 export const STORAGE_MAX_BYTES = 65_000; // for single files picked by the user
 /** The Pip-Boy's whole Storage area: one 128 KB flash page (boards/PIPBOY.py). */
 export const STORAGE_TOTAL_BYTES = 131_072;
@@ -205,6 +220,7 @@ export async function storageRebuild(session, entries, { onProgress = noop, onPh
     if (!(bytes instanceof Uint8Array) || !bytes.length) throw new Error(`${name}: empty or invalid file`);
   });
   if (new Set(entries.map(([n]) => n)).size !== entries.length) throw new Error('Duplicate file names');
+  requirePipBoy(session);
   const stats = await session.command(expr.storageStats());
   const capacity = stats?.totalBytes ?? STORAGE_TOTAL_BYTES;
   const need = storageFootprint(entries);

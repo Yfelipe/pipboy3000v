@@ -3,6 +3,8 @@ import { $, escapeHtml, empty, notify, iconRefresh, download, withButton } from 
 import { records, onRecords } from '../records.js';
 import { log } from '../activity.js';
 import { parseFrequency, SETTINGS_DEFAULTS } from '../../../shared/validate.js';
+import { readFromSd } from '../device/bundles.js';
+import { scanToPresets } from '../radio-tools.js';
 
 const SETTING_FIELDS = [
   ['brightness', 'setting-brightness'],
@@ -127,6 +129,36 @@ export function initRecordPages() {
         e.target.reset();
       } catch (err) {
         fail(err.message);
+      }
+    });
+  });
+
+  // The FM scan holotape saves what it found as USER/FMSCAN.json: add the ones not saved yet
+  $('radio-import-scan').addEventListener('click', async (e) => {
+    if (!records.ready) return fail('Saved records are not ready. Retry loading first.');
+    const bytes = await readFromSd('USER/FMSCAN.json');
+    if (bytes === undefined) return;
+    if (bytes === null) return notify('No FM scan on the Pip-Boy yet. Run the FM scan holotape (INV › APPS) first.');
+    let found;
+    try {
+      found = scanToPresets(JSON.parse(new TextDecoder().decode(bytes)), records.byKind('radio').map((r) => r.payload.frequency));
+    } catch (err) {
+      return fail(`Couldn’t read the FM scan: ${err.message}`);
+    }
+    if (!found.length) return notify('Every station from the scan is already saved.');
+    await withButton(e.target.closest('button'), async () => {
+      let added = 0;
+      try {
+        for (const s of found) {
+          await records.create({ kind: 'radio', name: s.name, payload: { frequency: s.frequency } });
+          added++;
+        }
+      } catch (err) {
+        fail(err.message);
+      }
+      if (added) {
+        notify(`${added} station${added === 1 ? '' : 's'} added from the FM scan.`);
+        log(`Imported ${added} station(s) from the FM scan`);
       }
     });
   });

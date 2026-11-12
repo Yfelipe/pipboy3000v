@@ -8,8 +8,8 @@
  * ----------------------------------------------------------------------------
  * Hardware layer for the WebAssembly build. Time and pins come from the
  * JavaScript host (wasm_host.h); flash is a buffer in our own memory.
- * Peripherals without an emulation (SPI, I2C, USART, timers) are accepted
- * and do nothing, as on targets/emscripten.
+ * I2C goes to the host, whose emulated chips answer (runtime/i2c.js). Other peripherals
+ * without an emulation (SPI, USART) are accepted and do nothing, as on targets/emscripten.
  * ----------------------------------------------------------------------------
  */
 #include <stdlib.h>
@@ -21,6 +21,7 @@
 #include "jsutils.h"
 #include "jsparse.h"
 #include "jsinteractive.h"
+#include "jstimer.h"
 #include "wasm_host.h"
 
 
@@ -42,7 +43,21 @@ void jshReset() {
 void jshKill() {
 }
 
+// The utility timer (require("timer") tasks, soft PWM, digitalPulse sequences): run from the main
+// loop when it's due, as the timer interrupt would on the device. The FO3 firmware fades its LEDs
+// with a require("timer") EXEC task, so they'd never move without this.
+static bool utilTimerOn = false;
+static JsSysTime utilTimerDue = 0;
+
+static void runUtilTimer() {
+  for (int i = 0; i < 64 && utilTimerOn && jshGetSystemTime() >= utilTimerDue; i++) {
+    utilTimerOn = false; // the handler reschedules it if more tasks are waiting
+    jstUtilTimerInterruptHandler();
+  }
+}
+
 void jshIdle() {
+  runUtilTimer();
 }
 
 void jshBusyIdle() {
@@ -54,6 +69,10 @@ bool jshSleep(JsSysTime timeUntilWake) {
   JsVarFloat ms = jshGetMillisecondsFromTime(timeUntilWake);
   if (ms > 0x7FFFFFFF) ms = 0x7FFFFFFF;
   if (ms < 0) ms = 0;
+  if (utilTimerOn) { // wake up for the next utility timer task
+    JsVarFloat due = jshGetMillisecondsFromTime(utilTimerDue - jshGetSystemTime());
+    if (due < ms) ms = due < 0 ? 0 : due;
+  }
   wasmTimeToSleep = (int)ms;
   return false;
 }
@@ -128,7 +147,8 @@ int jshPinAnalogFast(Pin pin) {
 
 JshPinFunction jshPinAnalogOutput(Pin pin, JsVarFloat value, JsVarFloat freq, JshAnalogOutputFlags flags) {
   (void)freq; (void)flags;
-  jshPinSetValue(pin, value > 0); // no PWM: any duty above 0 shows as on (e.g. dimmed LEDs)
+  wasmHostPinAnalogOut(pin, value); // the duty, for the host to show (e.g. a meter's needle)
+  jshPinSetValue(pin, value > 0); // and as a level: any duty above 0 shows as on (e.g. dimmed LEDs)
   return JSH_NOTHING;
 }
 
@@ -187,16 +207,23 @@ void jshSPIWait(IOEventFlags device) { (void)device; }
 
 void jshI2CSetup(IOEventFlags device, JshI2CInfo *inf) { (void)device; (void)inf; }
 void jshI2CWrite(IOEventFlags device, unsigned char address, int nBytes, const unsigned char *data, bool sendStop) {
-  (void)device; (void)address; (void)nBytes; (void)data; (void)sendStop;
+  (void)sendStop;
+  int bus = (int)(device - EV_I2C1) + 1;
+  if (!wasmHostI2CWrite(bus, address, data, nBytes))
+    jsExceptionHere(JSET_ERROR, "I2C%d: no device at address %d", bus, address);
 }
 void jshI2CRead(IOEventFlags device, unsigned char address, int nBytes, unsigned char *data, bool sendStop) {
-  (void)device; (void)address; (void)sendStop;
-  memset(data, 0, (size_t)nBytes); // no device answers
+  (void)sendStop;
+  int bus = (int)(device - EV_I2C1) + 1;
+  if (!wasmHostI2CRead(bus, address, data, nBytes)) {
+    memset(data, 0, (size_t)nBytes);
+    jsExceptionHere(JSET_ERROR, "I2C%d: no device at address %d", bus, address);
+  }
 }
 
-void jshUtilTimerDisable() {}
-void jshUtilTimerReschedule(JsSysTime period) { (void)period; }
-void jshUtilTimerStart(JsSysTime period) { (void)period; }
+void jshUtilTimerDisable() { utilTimerOn = false; }
+void jshUtilTimerReschedule(JsSysTime period) { utilTimerDue = jshGetSystemTime() + period; utilTimerOn = true; }
+void jshUtilTimerStart(JsSysTime period) { jshUtilTimerReschedule(period); }
 
 void jshEnableWatchDog(JsVarFloat timeout) { (void)timeout; }
 void jshKickWatchDog() {}
@@ -261,11 +288,12 @@ void jshFlashWrite(void *buf, uint32_t addr, uint32_t len) {
  * jshFlashGetMemMapAddress, so this is where they are given somewhere to live:
  *   - Storage addresses map to flashMemory;
  *   - addresses inside our own linear memory (E.getAddressOf results) are used as they are;
- *   - anything else is backed by zero-filled 64KB segments allocated on first use, so
+ *   - anything else is backed by zero-filled 256KB segments allocated on first use, so
  *     registers read back what was written to them and spare RAM behaves like RAM.
- * A single E.memoryArea() must not cross a 64KB boundary.
+ * A single E.memoryArea() must not cross a 256KB boundary. (The FO3 firmware's screen buffer
+ * runs from 0x10008000 to 0x10011600, past the first 64KB.)
  */
-#define DEVICE_SEGMENT_BITS 16
+#define DEVICE_SEGMENT_BITS 18
 #define DEVICE_SEGMENT_MAX 32
 static struct { uint32_t base; uint8_t *data; } deviceSegments[DEVICE_SEGMENT_MAX];
 static uint8_t deviceOverflow[1 << DEVICE_SEGMENT_BITS]; ///< used once all segments are taken

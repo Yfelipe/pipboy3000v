@@ -56,7 +56,7 @@ test('Clean up Storage reclaims deleted space on the single-page Pip-Boy Storage
 });
 
 test('storageRebuild refuses work that would not fit or would leave Storage empty', async () => {
-  const session = { command: async () => ({ totalBytes: 131072 }) };
+  const session = { board: 'PIPBOY', command: async () => ({ totalBytes: 131072 }) };
   await assert.rejects(ops.storageRebuild(session, []), /refusing to leave Storage empty/);
   await assert.rejects(ops.storageRebuild(session, [['big', new Uint8Array(131_072)]]), /need .* bytes but Storage holds/);
   await assert.rejects(ops.storageRebuild(session, [['a', new Uint8Array(1)], ['a', new Uint8Array(1)]]), /Duplicate/);

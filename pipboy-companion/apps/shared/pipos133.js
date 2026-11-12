@@ -101,3 +101,15 @@ export function stockPalette() {
     if (p) return p.split(",").map((a) => new Uint16Array(E.toArrayBuffer(atob(a))));
   } catch (e) {}
 }
+
+/**
+ * The companion's character sheet (USER/CHAR.json, from the dashboard's ID, lists & notes page):
+ * { level, special: [S, P, E, C, I, A, L] }, or null when the card has none.
+ */
+export function charSheet() {
+  try {
+    const d = JSON.parse(fs.readFile("USER/CHAR.json"));
+    if (d && Array.isArray(d.special) && d.special.length == 7) return d;
+  } catch (e) {}
+  return null;
+}

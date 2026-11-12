@@ -25,6 +25,14 @@ WASM_IMPORT("pinSet") void wasmHostPinSet(int pin, int value);
 WASM_IMPORT("pinGet") int wasmHostPinGet(int pin);
 /// Analog reading of a pin, 0..1
 WASM_IMPORT("pinAnalog") double wasmHostPinAnalog(int pin);
+/// analogWrite() duty (0..1) as the program asked for it, before negation: for gauges and dimmed LEDs
+WASM_IMPORT("pinAnalogOut") void wasmHostPinAnalogOut(int pin, double value);
+/// I2C transfers on bus 1..3 (I2C1..I2C3): the host's emulated chips answer. Return 1 if a chip
+/// at that address acknowledged, 0 if none did (Espruino then throws, as on a real bus)
+WASM_IMPORT("i2cWrite") int wasmHostI2CWrite(int bus, int address, const unsigned char *data, int length);
+WASM_IMPORT("i2cRead") int wasmHostI2CRead(int bus, int address, unsigned char *data, int length);
+/// The emulated SD card's size and free space in bytes, for fs.getFree(). Returns 0 if there's no card
+WASM_IMPORT("fsSpace") int wasmHostFsSpace(double *totalBytes, double *freeBytes);
 /// Called while Espruino waits for something to finish, e.g. for room in the full output buffer: the host drains output
 WASM_IMPORT("busyIdle") void wasmHostBusyIdle(void);
 /// Hardware reboot (E.reboot()). Never returns: the host abandons this instance and starts a new one.

@@ -155,6 +155,9 @@
             <p class="help mb-18">Extensions add screens to the Pip-Boy’s own interface instead of replacing it, and start each time it does. Holding the torch button while the Pip-Boy starts skips them. A Pip-OS update removes them; install them again afterwards.</p>
             <div id="loader-notice" class="notice mb-18" hidden>The extension loader on your Pip-Boy has an update (it now scrolls the menu names when extensions add more than fit). <button type="button" id="loader-update" class="btn small" data-device>Update it</button></div>
             <div id="extensions-catalog" class="app-grid" aria-live="polite"></div>
+            <h3 class="section-title">Holotapes</h3>
+            <p class="help mb-18">Small games and tools for the stock interface. They run straight from the SD card (INV › APPS), so they use none of the Pip-Boy’s Storage.</p>
+            <div id="holotapes-catalog" class="app-grid" aria-live="polite"></div>
             <article class="panel">
                 <div class="panel-title"><h3>Install your own app</h3></div>
                 <p class="help">Choose a JavaScript file written for the Pip-Boy. It’s installed the same way: copied to Storage and added to the APPS menu.</p>
@@ -231,6 +234,7 @@
                 <div class="panel-title"><h3>ID card</h3><small>INV › ID</small></div>
                 <div class="split-media">
                     <form id="id-form" class="stack" autocomplete="off">
+                        <div class="field"><label for="id-template">Card design</label><select id="id-template"></select></div>
                         <div class="field"><label for="id-name">Name</label><input id="id-name" maxlength="22" placeholder="e.g. Lucy MacLean"></div>
                         <div class="row">
                             <div class="field"><label for="id-room">Room</label><input id="id-room" maxlength="10" placeholder="e.g. 32-B"></div>
@@ -251,6 +255,47 @@
                     </form>
                     <figure class="screen-preview"><canvas id="id-canvas" width="400" height="300" aria-label="Preview of the ID card on the Pip-Boy"></canvas><figcaption>Preview: how it looks on the Pip-Boy</figcaption></figure>
                 </div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-title"><h3>Character sheet</h3><small>STAT in Mojave UI, Capital UI and PIP-OS X</small></div>
+                <p class="help">Your level and S.P.E.C.I.A.L. for the three apps’ STAT pages. Each attribute is 1 to 10. The apps read the sheet the next time they start.</p>
+                <form id="sheet-form" class="stack mt-12" autocomplete="off">
+                    <div class="row">
+                        <div class="field"><label for="sheet-level">Level</label><input id="sheet-level" type="number" min="1" max="99" step="1" value="1" inputmode="numeric"></div>
+                        <div class="field"><label>Points spent</label><output id="sheet-total" for="sheet-form">35</output></div>
+                    </div>
+                    <div id="sheet-special" class="row"></div>
+                    <div class="toolbar mt-12">
+                        <button type="button" id="sheet-send" class="btn" data-device><i data-lucide="send"></i> Send to Pip-Boy</button>
+                        <button type="button" id="sheet-load" class="btn secondary" data-device>Load from Pip-Boy</button>
+                    </div>
+                </form>
+            </article>
+
+            <article class="panel">
+                <div class="panel-title"><h3>Wasteland forecast</h3><small>DATA › NOTES</small></div>
+                <p class="help">Real weather for where you are, told the way a vault terminal would, and sent to the Pip-Boy as a note. The weather comes from Open-Meteo; this computer asks it only when you press Get the forecast.</p>
+                <form id="forecast-form" class="stack mt-12" autocomplete="off">
+                    <div class="toolbar">
+                        <button type="button" id="forecast-locate" class="btn secondary"><i data-lucide="locate"></i> Use my location</button>
+                        <span id="forecast-place" class="help">No place chosen yet.</span>
+                    </div>
+                    <div class="row">
+                        <div class="field"><label for="forecast-name">Or type a place</label><input id="forecast-name" maxlength="80" placeholder="e.g. Auckland"></div>
+                        <button type="submit" id="forecast-find" class="btn secondary">Find</button>
+                    </div>
+                    <div id="forecast-matches" class="list" hidden></div>
+                    <div class="row">
+                        <div class="field"><label for="forecast-lat">Latitude</label><input id="forecast-lat" type="number" min="-90" max="90" step="0.01" inputmode="decimal" placeholder="-36.85"></div>
+                        <div class="field"><label for="forecast-lon">Longitude</label><input id="forecast-lon" type="number" min="-180" max="180" step="0.01" inputmode="decimal" placeholder="174.76"></div>
+                    </div>
+                    <div class="toolbar mt-12">
+                        <button type="button" id="forecast-get" class="btn"><i data-lucide="cloud-sun"></i> Get the forecast</button>
+                        <button type="button" id="forecast-send" class="btn secondary" data-device disabled><i data-lucide="send"></i> Send to Pip-Boy</button>
+                    </div>
+                </form>
+                <pre id="forecast-text" class="mt-12" hidden></pre>
             </article>
 
             <article class="panel">
@@ -428,8 +473,23 @@
                 </form>
             </article>
             <article class="panel">
-                <div class="panel-title"><h3>Saved stations</h3><div class="row"><small id="radio-total">0 PRESETS</small><button id="device-radio" class="btn secondary small" data-device><i data-lucide="send"></i> Send to Pip-Boy</button></div></div>
+                <div class="panel-title"><h3>Saved stations</h3><div class="row"><small id="radio-total">0 PRESETS</small><button id="radio-import-scan" class="btn secondary small" data-device>Import FM scan</button><button id="device-radio" class="btn secondary small" data-device><i data-lucide="send"></i> Send to Pip-Boy</button></div></div>
                 <div id="radio-list" class="list"></div>
+                <p class="help mt-12">Import FM scan adds the stations the FM scan holotape found on your Pip-Boy (it saves them on the SD card). Rename them afterwards if you like.</p>
+            </article>
+            <article class="panel">
+                <div class="panel-title"><h3>Radio clips</h3><small id="clips-total"></small></div>
+                <p class="help">Turn your own audio into clips for the Pip-Boy’s radio. They’re converted here to the format it plays (16 kHz mono WAV) and named the way it chooses them from the SD card’s RADIO folder: MX for music, DX for voice, SFX for sound effects. Numbering from 50 leaves the clips that came with the Pip-Boy alone.</p>
+                <div class="toolbar mt-12">
+                    <button type="button" id="clips-choose" class="btn secondary"><i data-lucide="music"></i> Choose audio files…</button>
+                    <div class="field"><label for="clips-start">Number from</label><input id="clips-start" type="number" min="1" max="99" step="1" value="50" inputmode="numeric"></div>
+                </div>
+                <div id="clips-list" class="list mt-12"></div>
+                <div class="toolbar mt-12">
+                    <button type="button" id="clips-zip" class="btn" disabled><i data-lucide="download"></i> Download as a .zip</button>
+                    <button type="button" id="clips-send" class="btn secondary" data-device disabled>Copy to the SD card</button>
+                </div>
+                <p class="help mt-12">Copying over USB runs at about 3 KB a second, so a minute of audio takes around ten minutes. For whole songs, download the .zip and copy its RADIO folder onto the card with a card reader.</p>
             </article>
         </section>
 
@@ -492,7 +552,7 @@
             </div>
             <article class="panel">
                 <div class="dropzone"><i data-lucide="scan-search"></i><strong>Check media files</strong>
-                    <p>MP3, WAV, OGG, JPG, PNG, MP4 and TXT. Files are checked here and not uploaded.</p><label for="media-files" class="btn">Choose files</label><input id="media-files" class="hidden-input" type="file" multiple>
+                    <p>MP3, WAV, OGG, AVI, JPG, PNG, MP4 and TXT. Files are checked here and not uploaded.</p><label for="media-files" class="btn">Choose files</label><input id="media-files" class="hidden-input" type="file" multiple>
                 </div>
             </article>
             <article class="panel">

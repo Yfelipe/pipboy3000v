@@ -285,7 +285,7 @@ describe('connection', () => {
 
 describe('frame handling', () => {
   test('a frame from another request is discarded as stale', async () => {
-    const { port, session } = await connected({
+    const { session } = await connected({
       hooks: {
         beforeEval(code, { emit }) {
           if (code.includes('"value"')) return true;
@@ -426,6 +426,18 @@ describe('Storage (internal flash)', () => {
     const { session } = await connected();
     assert.equal(await ops.storageRead(session, 'missing.txt', noDelay), null);
     await session.close();
+  });
+
+  test('a rebuild refuses a device that reports no board name, before anything is erased', async () => {
+    const { port, session } = await connected({ board: null, storage: { 'a.js': 'print(1)' } });
+    await assert.rejects(ops.storageRebuild(session, [['a.js', new Uint8Array([1])]]), /didn.t report that it.s a Pip-Boy/);
+    assert.equal(port.state.storage.read('a.js'), 'print(1)');
+    await session.close();
+  });
+
+  test('lacksFirmware spots a backup without Pip-OS', () => {
+    assert.equal(ops.lacksFirmware([['a.js', new Uint8Array(1)]]), true);
+    assert.equal(ops.lacksFirmware([['a.js', new Uint8Array(1)], [ops.FIRMWARE_FILE, new Uint8Array(1)]]), false);
   });
 
   test('backup and restore round-trip all files, including binary', async () => {

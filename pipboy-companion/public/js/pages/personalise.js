@@ -8,6 +8,9 @@ import { sendToSd, readFromSd, deleteFromSd } from '../device/bundles.js';
 import { runJob } from '../device/jobs.js';
 import * as ops from '../serial/device-ops.js';
 import { pipText } from './home.js';
+import { ID_TEMPLATES, idTemplate, fieldLabel } from '../idtemplates.js';
+import { SHEET_PATH, SPECIAL, SHEET_DEFAULT, normaliseSheet } from '../charsheet.js';
+import { wastelandReport, placeLabel } from '../forecast.js';
 import { FEED, IDCARD, LISTS_PATH, pack2bpp, toGrey, quantize, dither, previewRgba, normaliseLists, listId } from '../pipimage.js';
 
 const enc = new TextEncoder();
@@ -47,8 +50,45 @@ function showLevels(canvas, levels) {
 const PHOTO = { x: 264, y: 58, w: 122, h: 202 };
 let idPhoto = null; // { levels, dataUrl }
 
+const emblems = new Map(); // template id -> its emblem as a canvas, once loaded
+
+/**
+ * An emblem as a canvas in greys that show on the card's dark panel: its own tones, lifted so a
+ * dark emblem (the Enclave's, the Brotherhood's) is still a clear shape. Transparency is kept.
+ */
+function brighten(img) {
+  const s = Math.min(1, 200 / Math.max(img.naturalWidth, img.naturalHeight)) || 1;
+  const c = Object.assign(document.createElement('canvas'), { width: Math.max(1, Math.round(img.naturalWidth * s)), height: Math.max(1, Math.round(img.naturalHeight * s)) });
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const data = ctx.getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < data.data.length; i += 4) {
+    const lum = (0.299 * data.data[i] + 0.587 * data.data[i + 1] + 0.114 * data.data[i + 2]) / 255;
+    data.data[i] = data.data[i + 1] = data.data[i + 2] = Math.round(255 * (0.6 + 0.4 * lum));
+  }
+  ctx.putImageData(data, 0, 0);
+  return c;
+}
+
+/** Show the chosen design's field names, load its emblem if it has one, and redraw. */
+async function useTemplate() {
+  const t = idTemplate($('id-template').value);
+  [['id-room', 1], ['id-dob', 2], ['id-skill', 3], ['id-vault', 4]].forEach(([id, i]) => {
+    document.querySelector(`label[for="${id}"]`).textContent = fieldLabel(t.labels[i]);
+  });
+  drawIdCard();
+  if (!t.emblem || emblems.has(t.id)) return;
+  try {
+    emblems.set(t.id, brighten(await loadImage(t.emblem)));
+  } catch {
+    emblems.set(t.id, null); // the picture isn't in assets/official: the card keeps its barcode
+  }
+  drawIdCard();
+}
+
 function fields() {
   return {
+    template: idTemplate($('id-template').value).id,
     name: $('id-name').value.trim(),
     room: $('id-room').value.trim(),
     dob: $('id-dob').value.trim(),
@@ -86,6 +126,7 @@ function barcode(ctx, text, x, y, w, h) {
 /** The card as 0..3 levels, 400x300. */
 function idCardLevels(f) {
   const { width: W, height: H } = IDCARD;
+  const t = idTemplate(f.template);
   const c = Object.assign(document.createElement('canvas'), { width: W, height: H });
   const ctx = c.getContext('2d');
   const grey = (l) => `rgb(${GREY[l]},${GREY[l]},${GREY[l]})`;
@@ -107,7 +148,7 @@ function idCardLevels(f) {
   ctx.fillStyle = grey(3);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
-  fitText(ctx, 'DWELLER IDENTIFICATION', W / 2, 31, W - 30, 34);
+  fitText(ctx, t.title, W / 2, 31, W - 30, 34);
   // details panel
   const panel = (x, y, w, h) => {
     ctx.fillStyle = grey(0);
@@ -117,11 +158,11 @@ function idCardLevels(f) {
   };
   panel(12, 56, 240, 158);
   ctx.textAlign = 'left';
-  [['NAME', f.name], ['ROOM', f.room], ['DOB', f.dob], ['SKILL', f.skill], ['VAULT', f.vault]].forEach(([label, value], i) => {
+  [f.name, f.room, f.dob, f.skill, f.vault].forEach((value, i) => {
+    const label = t.labels[i];
     const y = 82 + i * 27;
     ctx.fillStyle = grey(2);
-    ctx.font = `700 19px ${FONT}`;
-    ctx.fillText(label, 22, y);
+    fitText(ctx, label, 22, y, 64, 19); // six-letter labels (COHORT) shrink to fit the column
     ctx.fillStyle = grey(3);
     fitText(ctx, value.toUpperCase(), 92, y, 152, 21);
   });
@@ -129,7 +170,13 @@ function idCardLevels(f) {
   panel(12, 222, 240, 66);
   ctx.fillStyle = grey(3);
   fitText(ctx, f.vault ? `No. ${f.vault.toUpperCase()}` : 'No. ---', 22, 256, 112, 34);
-  barcode(ctx, `${f.name}|${f.vault}|${f.dob}`, 146, 232, 96, 46);
+  const emblem = emblems.get(t.id);
+  if (emblem) {
+    // the design's emblem, fitted into the barcode's place
+    const s = Math.min(100 / emblem.width, 56 / emblem.height);
+    const w = emblem.width * s, h = emblem.height * s;
+    ctx.drawImage(emblem, 194 - w / 2, 255 - h / 2, w, h);
+  } else barcode(ctx, `${f.name}|${f.vault}|${f.dob}`, 146, 232, 96, 46);
   // photo frame
   panel(PHOTO.x - 2, PHOTO.y - 2, PHOTO.w + 4, PHOTO.h + 4);
   if (!idPhoto) {
@@ -147,7 +194,7 @@ function idCardLevels(f) {
   ctx.fillStyle = grey(2);
   ctx.textAlign = 'center';
   ctx.font = `700 15px ${FONT}`;
-  ctx.fillText('ISSUED 2077', PHOTO.x + PHOTO.w / 2, 280);
+  ctx.fillText(t.footer, PHOTO.x + PHOTO.w / 2, 280);
   const levels = quantize(toGrey(ctx.getImageData(0, 0, W, H).data));
   if (idPhoto) {
     for (let y = 0; y < PHOTO.h; y++) for (let x = 0; x < PHOTO.w; x++) levels[(PHOTO.y + y) * W + PHOTO.x + x] = idPhoto.levels[y * PHOTO.w + x];
@@ -185,6 +232,8 @@ async function loadId() {
   if (bytes === null) return notify('There’s no ID card on the Pip-Boy yet.');
   try {
     const d = JSON.parse(dec.decode(bytes));
+    $('id-template').value = idTemplate(d.template).id;
+    await useTemplate();
     $('id-name').value = d.name ?? '';
     $('id-room').value = d.room ?? '';
     $('id-dob').value = d.dob ?? '';
@@ -197,6 +246,178 @@ async function loadId() {
   } catch (e) {
     notify(`Couldn’t read the ID card details: ${e.message}`, true);
   }
+}
+
+// --------------------------------------------------------- character sheet
+function sheetFromForm() {
+  return normaliseSheet({
+    level: $('sheet-level').value,
+    special: [...document.querySelectorAll('#sheet-special input')].map((el) => el.value),
+  });
+}
+
+function showSheet(sheet) {
+  $('sheet-level').value = sheet.level;
+  document.querySelectorAll('#sheet-special input').forEach((el, i) => { el.value = sheet.special[i]; });
+  $('sheet-total').textContent = sheet.special.reduce((a, b) => a + b, 0);
+  try {
+    localStorage.setItem('pipboy-sheet-draft', JSON.stringify(sheet));
+  } catch {}
+}
+
+async function sendSheet() {
+  const sheet = sheetFromForm();
+  showSheet(sheet);
+  const r = await sendToSd('Send the character sheet', [{ path: SHEET_PATH, bytes: enc.encode(JSON.stringify(sheet)), label: 'Copying the character sheet' }], {
+    finish: 'Your character sheet is on the Pip-Boy. Mojave UI, Capital UI and PIP-OS X show it the next time they start.',
+  });
+  if (r?.ok) log('Character sheet sent to the Pip-Boy');
+}
+
+async function loadSheet() {
+  const bytes = await readFromSd(SHEET_PATH);
+  if (bytes === undefined) return;
+  if (bytes === null) return notify('There’s no character sheet on the Pip-Boy yet.');
+  try {
+    showSheet(normaliseSheet(JSON.parse(dec.decode(bytes))));
+    notify('Loaded the character sheet from the Pip-Boy.');
+  } catch (e) {
+    notify(`Couldn’t read the character sheet: ${e.message}`, true);
+  }
+}
+
+function initSheet() {
+  $('sheet-special').innerHTML = SPECIAL.map(
+    (name, i) => `<div class="field"><label for="sheet-s${i}">${escapeHtml(name)}</label><input id="sheet-s${i}" type="number" min="1" max="10" step="1" value="5" inputmode="numeric"></div>`,
+  ).join('');
+  let sheet = SHEET_DEFAULT;
+  try {
+    const draft = JSON.parse(localStorage.getItem('pipboy-sheet-draft') ?? 'null');
+    if (draft) sheet = normaliseSheet(draft);
+  } catch {}
+  showSheet(sheet);
+  $('sheet-form').addEventListener('change', () => showSheet(sheetFromForm()));
+  $('sheet-form').addEventListener('submit', (e) => e.preventDefault());
+  $('sheet-send').addEventListener('click', sendSheet);
+  $('sheet-load').addEventListener('click', loadSheet);
+}
+
+// --------------------------------------------------------- wasteland forecast
+const FORECAST_NOTE = 'NOTES/FORECAST.txt';
+let forecastText = '';
+
+function forecastPlace() {
+  try {
+    return JSON.parse(localStorage.getItem('pipboy-forecast-place') ?? 'null');
+  } catch {
+    return null;
+  }
+}
+
+/** Remember a place and show it. label: its name, or '' for bare coordinates; typed: the person entered them. */
+function setForecastPlace(lat, lon, label, typed = false) {
+  const place = { lat: Math.round(lat * 100) / 100, lon: Math.round(lon * 100) / 100, label, typed };
+  try {
+    localStorage.setItem('pipboy-forecast-place', JSON.stringify(place));
+  } catch {}
+  showForecastPlace(place);
+  return place;
+}
+
+function showForecastPlace(place) {
+  $('forecast-place').textContent = place ? `${place.label || (place.typed ? 'Typed coordinates' : 'Your location')} (${place.lat}, ${place.lon})` : 'No place chosen yet.';
+  $('forecast-lat').value = place?.lat ?? '';
+  $('forecast-lon').value = place?.lon ?? '';
+  $('forecast-matches').hidden = true;
+}
+
+/** Ask the browser where we are. Resolves a place, or null with a message saying what to do. */
+function locate() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      notify('This browser can’t tell where you are. Type a place or the coordinates instead.', true);
+      return resolve(null);
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve(setForecastPlace(pos.coords.latitude, pos.coords.longitude, '')),
+      () => {
+        notify('Your location wasn’t available (it may be switched off or not allowed). Type a place or the coordinates instead.', true);
+        resolve(null);
+      },
+      { timeout: 10_000, maximumAge: 3600_000 },
+    );
+  });
+}
+
+async function getJson(url) {
+  const res = await fetch(url);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error?.message ?? `The server answered ${res.status}`);
+  return body;
+}
+
+async function findPlace() {
+  const name = $('forecast-name').value.trim();
+  if (name.length < 2) return notify('Type at least two letters of a place name.', true);
+  let found;
+  try {
+    found = (await getJson(`/api/places?name=${encodeURIComponent(name)}`)).places;
+  } catch (e) {
+    return notify(e.message, true);
+  }
+  if (!found.length) return notify(`No place called “${name}” was found. Try another spelling, or type the coordinates.`, true);
+  if (found.length === 1) return setForecastPlace(found[0].lat, found[0].lon, placeLabel(found[0]));
+  const box = $('forecast-matches');
+  box.hidden = false;
+  box.innerHTML = found
+    .map((p, i) => `<div class="item"><div class="item-main"><strong>${escapeHtml(placeLabel(p))}</strong><span>${p.lat}, ${p.lon}</span></div><div class="item-actions"><button type="button" class="mini" data-forecast-pick="${i}">Use this</button></div></div>`)
+    .join('');
+  box.onclick = (e) => {
+    const b = e.target.closest('[data-forecast-pick]');
+    if (b) setForecastPlace(found[Number(b.dataset.forecastPick)].lat, found[Number(b.dataset.forecastPick)].lon, placeLabel(found[Number(b.dataset.forecastPick)]));
+  };
+}
+
+async function getForecast() {
+  // typed coordinates win over the remembered place; with neither, try to detect where we are
+  let place = forecastPlace();
+  const lat = $('forecast-lat').value.trim(), lon = $('forecast-lon').value.trim();
+  if (lat !== '' && lon !== '' && (!place || Number(lat) !== place.lat || Number(lon) !== place.lon)) {
+    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon)) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return notify('Latitude is -90 to 90 and longitude is -180 to 180.', true);
+    place = setForecastPlace(Number(lat), Number(lon), '', true);
+  }
+  if (!place) place = await locate();
+  if (!place) return;
+  let data;
+  try {
+    data = await getJson(`/api/forecast?lat=${place.lat}&lon=${place.lon}`);
+  } catch (e) {
+    return notify(e.message, true);
+  }
+  forecastText = pipText(wastelandReport(data, place.label));
+  $('forecast-text').textContent = forecastText;
+  $('forecast-text').hidden = false;
+  $('forecast-send').disabled = false;
+  log(`Wasteland forecast fetched for ${place.label || `${place.lat}, ${place.lon}`}`);
+}
+
+async function sendForecast() {
+  if (!forecastText) return;
+  const r = await sendToSd('Send the forecast', [{ path: FORECAST_NOTE, bytes: enc.encode(forecastText + '\n'), label: 'Copying the forecast note' }], {
+    finish: 'The forecast is on the Pip-Boy: DATA › NOTES › FORECAST.',
+  });
+  if (r?.ok) log('Wasteland forecast sent to the Pip-Boy');
+}
+
+function initForecast() {
+  showForecastPlace(forecastPlace());
+  $('forecast-locate').addEventListener('click', locate);
+  $('forecast-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    findPlace();
+  });
+  $('forecast-get').addEventListener('click', getForecast);
+  $('forecast-send').addEventListener('click', sendForecast);
 }
 
 // ------------------------------------------------------------------- lists
@@ -475,6 +696,10 @@ function renderFirmware() {
 }
 
 export function initPersonalise() {
+  $('id-template').innerHTML = ID_TEMPLATES.map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+  $('id-template').addEventListener('change', useTemplate);
+  initSheet();
+  initForecast();
   for (const id of ['id-name', 'id-room', 'id-dob', 'id-skill', 'id-vault']) $(id).addEventListener('input', drawIdCard);
   $('id-photo').addEventListener('click', async () => {
     const [file] = await pickFiles({ accept: 'image/*' });

@@ -1,0 +1,1 @@
+load("endurance.min.js");
