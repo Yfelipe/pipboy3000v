@@ -41,7 +41,7 @@ file the app runs as before, minus those pages.
 - **DATA › INBOX**: messages from the companion's Home page. A message sent while the app runs
   pops up over it (the dashboard calls the app's `companionMessage`).
 
-The **themes** are Holo (default), Phosphor green, Amber and Institute white-blue, chosen in DATA › SYSTEM (the PIP-BOY theme uses the stock interface's own display colour).
+The **themes** are Holo (default), Phosphor green, Amber, Institute white-blue, Legion crimson, NCR khaki and Enclave blue, chosen in DATA › SYSTEM (the PIP-BOY theme uses the stock interface's own display colour).
 The header uses slanted tab cells. The footer shows battery, time and date, memory and signal.
 
 ## Run it

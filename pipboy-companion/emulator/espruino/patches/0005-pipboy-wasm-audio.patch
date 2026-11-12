@@ -1,0 +1,14 @@
+diff --git a/libs/pipboy/stm32_i2s.c b/libs/pipboy/stm32_i2s.c
+index 324cf5e1..25308f45 100644
+--- a/libs/pipboy/stm32_i2s.c
++++ b/libs/pipboy/stm32_i2s.c
+@@ -25,7 +25,8 @@
+ #include "jsinteractive.h"
+ #include "stm32_i2s.h"
+ 
+-#ifdef LINUX // stubs
++#if defined(WASM) // the WebAssembly build has its own: targets/wasm/audio_wasm.c
++#elif defined(LINUX) // stubs
+ void STM32_I2S_Init() {};
+ void STM32_I2S_Kill() {};
+ void STM32_I2S_Prepare(int audioFreq) {};

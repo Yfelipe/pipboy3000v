@@ -79,6 +79,20 @@ export class MemFS {
     if (!where || !where.parent.children.delete(where.name)) throw new Error(`No such file: ${path}`);
   }
 
+  /**
+   * Bytes in use, as a FAT card counts them: each file takes whole clusters (32 KB, as the
+   * card's 512 byte sectors x 64), and each directory one cluster.
+   */
+  usedBytes(cluster = 32768) {
+    const count = (node) => {
+      if (node.type === 'file') return Math.max(1, Math.ceil(node.data.length / cluster)) * cluster;
+      let n = cluster;
+      for (const child of node.children.values()) n += count(child);
+      return n;
+    };
+    return count(this.root);
+  }
+
   /** Every file below `path` as [absolutePath, bytes]. */
   *walk(path = '/') {
     const node = this.lookup(path);
@@ -87,7 +101,7 @@ export class MemFS {
       yield [path, node.data];
       return;
     }
-    for (const [name, child] of node.children) {
+    for (const name of node.children.keys()) {
       yield* this.walk(`${path === '/' ? '' : path}/${name}`);
     }
   }

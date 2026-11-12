@@ -8,6 +8,7 @@
 // milliseconds until it needs to run again. Input, pin changes and timers schedule the next burst.
 
 import { MemFS } from './memfs.js';
+import { I2CBuses } from './i2c.js';
 import { Wasi, WasiExit } from './wasi.js';
 
 const STORAGE_CHUNK = 4096;
@@ -27,6 +28,8 @@ export class Espruino {
    * @param {(text: string) => void} [options.onOutput]   console output (what the REPL prints)
    * @param {(text: string) => void} [options.onLog]      C-level stdout/stderr of the firmware (debugging)
    * @param {(pin: string|number, level: number) => void} [options.onPinChange]  an output pin changed (LEDs)
+   * @param {(pin: number, duty: number) => void} [options.onAnalogOut]  analogWrite() duty 0..1 (meters, dimmed LEDs)
+   * @param {(samples: Int16Array, rate: number) => void} [options.onAudio]  sound the board plays (Pip.audioStart etc.), 16 bit mono, as it becomes due
    * @param {() => void} [options.onReboot]      the program is rebooting the device (E.reboot())
    * @param {boolean} [options.autoRun=true]     schedule bursts automatically (false: call idle() yourself)
    */
@@ -37,7 +40,7 @@ export class Espruino {
     return emu;
   }
 
-  constructor({ board, module, flash, fs, onOutput = () => {}, onLog = () => {}, onPinChange = () => {}, onReboot = () => {}, autoRun = true }) {
+  constructor({ board, module, flash, fs, onOutput = () => {}, onLog = () => {}, onPinChange = () => {}, onAnalogOut = () => {}, onAudio = () => {}, onReboot = () => {}, autoRun = true }) {
     this.board = board;
     this.module = module;
     this.savedFlash = flash ?? new Uint8Array(board.storageBytes).fill(0xff);
@@ -46,11 +49,15 @@ export class Espruino {
     this.onOutput = onOutput;
     this.onLog = onLog;
     this.onPinChange = onPinChange;
+    this.onAnalogOut = onAnalogOut;
+    this.onAudio = onAudio;
     this.onReboot = onReboot;
     this.autoRun = autoRun;
     this.levels = new Map(); // pin number -> electrical level, driven by the host or set by the program
     this.held = new Map(); // buttons the host holds down: pin -> level, kept through reboots
     this.analog = new Map(); // pin number -> 0..1
+    this.analogOut = new Map(); // pin number -> analogWrite() duty 0..1, as the program set it
+    this.i2c = new I2CBuses(board.i2c, this); // the board's emulated I2C chips (runtime/i2c.js)
     this.timer = null;
     this.stopped = false;
   }
@@ -67,6 +74,8 @@ export class Espruino {
         espruino: this.#hostImports(),
       });
       this.exports = instance.exports;
+      this.audioBuffer = 0; // allocated in the new instance on first use
+      this.audioClock = null;
       this.wasi.setMemory(this.exports.memory);
       this.exports._initialize();
       this.#flashView().set(this.savedFlash);
@@ -135,8 +144,32 @@ export class Espruino {
       throw e;
     }
     this.#drainOutput();
+    if (this.#pumpAudio()) next = Math.min(next, 15); // keep the sound flowing
     if (this.autoRun) this.timer = setTimeout(() => this.idle(), Math.min(next, 0x7fffffff));
     return next;
+  }
+
+  /**
+   * Take the samples that are due to play (real time, at the sample rate) from the board's audio
+   * ring buffer (targets/wasm/audio_wasm.c) and hand them to onAudio. Returns true while playing.
+   */
+  #pumpAudio() {
+    const ex = this.exports;
+    if (!ex.wasmAudioRead) return false; // a board without the Pip-Boy's audio
+    if (!ex.wasmAudioPlaying()) {
+      this.audioClock = null;
+      return false;
+    }
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const rate = ex.wasmAudioRate();
+    this.audioClock ??= now - 60; // start with a little in hand
+    const due = Math.min(8192, Math.floor(((now - this.audioClock) * rate) / 1000));
+    if (due <= 0) return true;
+    this.audioBuffer ||= ex.wasmAlloc(8192 * 2);
+    const n = ex.wasmAudioRead(this.audioBuffer, due);
+    this.audioClock = n < due ? now : this.audioClock + (n * 1000) / rate; // ran dry: start again from now
+    if (n) this.onAudio(new Int16Array(ex.memory.buffer, this.audioBuffer, n).slice(), rate);
+    return !!ex.wasmAudioPlaying();
   }
 
   #drainOutput() {
@@ -266,6 +299,20 @@ export class Espruino {
     this.setPin(second, rest);
   }
 
+  /** Tap the board's accelerometer (its interrupt line fires until the firmware reads it). */
+  tap() {
+    const accel = this.i2c.find('kxtj3');
+    if (!accel) throw new Error(`${this.board.name} has no accelerometer`);
+    accel.tap();
+  }
+
+  /** Set the accelerometer's reading in g, in the chip's own axes (flat on a table: 0, 0, 1). */
+  setAcceleration(x, y, z) {
+    const accel = this.i2c.find('kxtj3');
+    if (!accel) throw new Error(`${this.board.name} has no accelerometer`);
+    accel.setAcceleration(x, y, z);
+  }
+
   /** Move a selector switch from the board profile to a position (index into `positions`). */
   setSelector(id, index) {
     const sel = this.board.selectors?.[id];
@@ -332,7 +379,26 @@ export class Espruino {
         this.onPinChange(pin, value);
       },
       pinGet: (pin) => this.levels.get(pin) ?? 0,
+      i2cWrite: (bus, address, ptr, length) => (this.i2c.write(bus, address, new Uint8Array(this.exports.memory.buffer, ptr, length).slice()) ? 1 : 0),
+      i2cRead: (bus, address, ptr, length) => {
+        const data = this.i2c.read(bus, address, length);
+        if (!data) return 0;
+        new Uint8Array(this.exports.memory.buffer, ptr, length).set(data);
+        return 1;
+      },
+      pinAnalogOut: (pin, value) => {
+        this.analogOut.set(pin, value);
+        this.onAnalogOut(pin, value);
+      },
       pinAnalog: (pin) => this.#readAnalog(pin),
+      fsSpace: (totalPtr, freePtr) => {
+        // fs.getFree(): an SD card of the board's size (16 GB unless it says), less what's on it
+        const total = this.board.sdCardBytes ?? 16 * 1024 ** 3;
+        const view = new DataView(this.exports.memory.buffer);
+        view.setFloat64(totalPtr, total, true);
+        view.setFloat64(freePtr, Math.max(0, total - this.fs.usedBytes()), true);
+        return 1;
+      },
       busyIdle: () => this.#drainOutput(), // e.g. jshTransmit waiting for room in a full output buffer
       reboot: () => {
         throw new RebootRequest(); // unwinds out of the module; caught in #boot() / idle()

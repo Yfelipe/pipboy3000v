@@ -8,7 +8,7 @@ the emulator, and the stock firmware stays installed: the power button returns t
 
 | Tab | Pages |
 | --- | --- |
-| STAT | STATUS (limb condition, radiation gauge, the season's control-chip implant) · S.P.E.C.I.A.L. · FACTIONS (reputation with the NCR, Caesar's Legion, the Strip, the Brotherhood, the Enclave, the Great Khans and Freeside) |
+| STAT | STATUS (Vault Boy from the SD card's `STAT/VB*.avi` animations, changed with the wheel, beside the radiation gauge and the season's control-chip implant; a card without those videos gets a drawn figure with limb bars) · S.P.E.C.I.A.L. · FACTIONS (reputation with the NCR, Caesar's Legion, the Strip, the Brotherhood, the Enclave, the Great Khans and Freeside) |
 | INV | WEAPONS · APPAREL · AID · MISC: items from the season (crowbar, cold fusion diode, control chip, water chip, Liberty Prime plans, Overseer's Pip-Boy). The wheel button equips. · ID: your ID card, full screen · REMOTE: USB media keys |
 | DATA | QUESTS (one per episode, *The Innovator* to *The Strip*) · UPLINK (a Lucky 38 terminal) · FEEDS (the SD card's feed videos and pictures) · LISTS (checklists to tick off) · NOTES · INBOX · CLOCK · SYSTEM (theme, brightness, sounds, back to the stock UI) |
 | MAP | The Mojave: the Strip, Freeside, Camp McCarran, Hoover Dam, Fortification Hill, Goodsprings, Primm, Novac, Red Rock Canyon, Black Mountain, Area 51 |
@@ -40,6 +40,7 @@ The styling:
   - Overseer gold, matching Hank's Pip-Boy and the Overseer's Edition.
   - Classic green.
   - Enclave blue.
+  - Legion crimson, NCR khaki and Lucky 38 teal, for the three powers fighting over New Vegas.
 - **A New Vegas-style footer:** HP shows the battery and AP shows free memory, with the date and time between them.
 - **The stock firmware's scanline sweep and palette.** Pages are drawn into 2-bit buffers and shown with `Pip.blitImage`.
 

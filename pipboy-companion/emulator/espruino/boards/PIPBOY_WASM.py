@@ -47,6 +47,8 @@ info = {
      'DEFINES += -DESPR_STACK_SIZE=32768',
      'INCLUDE += -I$(ROOT)/libs/pipboy',
      'WRAPPERSOURCES += libs/pipboy/avi.c libs/pipboy/stm32_i2s.c',
+     'SOURCES += targets/wasm/audio_wasm.c', # the audio output: the host plays what libs/pipboy queues
+     'LDFLAGS += -Wl,--export=wasmAudioRead -Wl,--export=wasmAudioRate -Wl,--export=wasmAudioPlaying',
      'WRAPPERSOURCES += libs/pipboy/jswrap_pipboy.c',
      'WRAPPERSOURCES += libs/pipboy/jswrap_font_monofonto_120.c',
      'WRAPPERSOURCES += libs/pipboy/jswrap_font_monofonto_96.c',

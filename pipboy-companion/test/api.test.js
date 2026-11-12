@@ -1,7 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { createApp } from '../server/app.js';
+import { createApp, isLoopbackHost } from '../server/app.js';
 import { tempDir, quietLogger } from './support/tmp.js';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -84,6 +84,12 @@ describe('static files', () => {
     assert.equal((await request('GET', '/emulator/build.sh')).status, 404);
     assert.equal((await request('GET', '/emulator/espruino/ESPRUINO_COMMIT')).status, 404);
     assert.equal((await request('GET', '/apps/index.json')).status, 200);
+    assert.equal((await request('GET', '/apps/holotapes/sd/CLOCK/ROBCO.IMG')).status, 200, 'a holotape\'s image file');
+    assert.equal((await request('GET', '/apps/holotapes/build.sh')).status, 404, 'only app files are served');
+    // assets: only pictures at the top of assets/official (the ID card emblems)
+    assert.equal((await request('GET', '/assets/official/STAT/VB01.avi')).status, 404);
+    assert.equal((await request('GET', '/assets/official/fallout-level-up.ogg')).status, 404);
+    assert.equal((await request('GET', '/assets/official/missing.png')).status, 404);
     assert.equal((await request('GET', '/apps/mojave/mojave.min.js')).status, 200);
     assert.equal((await request('GET', '/apps/mojave/build.sh')).status, 404);
   });
@@ -94,6 +100,11 @@ describe('static files', () => {
 });
 
 describe('request guards', () => {
+  test('the server only listens on this computer', () => {
+    for (const host of ['127.0.0.1', '::1', 'localhost', 'LOCALHOST']) assert.equal(isLoopbackHost(host), true, host);
+    for (const host of ['0.0.0.0', '::', '192.168.1.20', 'example.com', '']) assert.equal(isLoopbackHost(host), false, host);
+  });
+
   test('rejects foreign Host headers (DNS rebinding)', async () => {
     const res = await request('GET', '/api/health', { headers: { Host: 'evil.example:8077' } });
     assert.equal(res.status, 421);
@@ -108,6 +119,28 @@ describe('request guards', () => {
     const site = await request('DELETE', '/api/logs', { headers: { 'Sec-Fetch-Site': 'cross-site' } });
     assert.equal(site.status, 403);
     assert.equal((await request('DELETE', '/api/logs', { headers: { 'Sec-Fetch-Site': 'same-origin', Origin: base } })).status, 204);
+  });
+
+  test('Pip-OS releases per variant, read from The Wand Company\'s indexes on the server and cached', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'pipboy-pipos-'));
+    const asked = [];
+    const indexes = {
+      'https://cdn.thewandcompany.com/blueprint/index.json': [{ Version: 'v1.33', ReleaseDate: '2026-10-29T22:44:21+00:00', Assets: ['blueprint/v1.33/assets/blueprint_2v29.400-1.33.zip'] }],
+      'https://cdn.thewandcompany.com/blueprint-overseer/index.json': [{ Version: 'v2.01', ReleaseDate: '2026-11-10T01:13:57+00:00', Assets: ['blueprint-overseer/v2.01/assets/overseer_2v29.402-2.01.zip'] }],
+    };
+    const other = await createApp({ dataDir: dir, logger: quietLogger, fetchImpl: async (url) => { asked.push(url); return { ok: !!indexes[url], json: async () => indexes[url] }; } });
+    await new Promise((r) => other.server.listen(0, '127.0.0.1', r));
+    const base = `http://localhost:${other.server.address().port}/api/pipos-releases`;
+    const get = (q = '') => fetch(base + q).then(async (r) => ({ status: r.status, body: await r.json() }));
+    assert.equal((await get()).body.releases[0].zipUrl, 'https://cdn.thewandcompany.com/blueprint/v1.33/assets/blueprint_2v29.400-1.33.zip', 'blueprint by default');
+    const overseer = await get('?variant=overseer');
+    assert.equal(overseer.body.releases[0].zipFile, 'overseer_2v29.402-2.01.zip');
+    await get('?variant=overseer');
+    assert.equal(asked.filter((u) => u.includes('overseer')).length, 1, 'cached');
+    assert.equal((await get('?variant=FO3')).body.releases, null, 'a list that can\'t be read is null (and asked again next time)');
+    assert.equal((await get('?variant=../../etc')).status, 400, 'only known variants');
+    other.server.close();
+    await rm(dir, { recursive: true, force: true });
   });
 
   test('malformed % escapes in a path are a 400, not a server error', async () => {

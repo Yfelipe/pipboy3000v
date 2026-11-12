@@ -25,10 +25,21 @@ export async function loadDumpSd(manifest, readFile, fs, { onProgress = () => {}
   return { files: files.length, skipped: entries.filter((e) => e.skipped).map((e) => e.path) };
 }
 
-/** Write the dump's Storage files into the emulator's flash and reboot so the boot code runs. */
-export async function loadDumpStorage(manifest, readFile, emu) {
+/**
+ * Write the dump's Storage files into the emulator's flash and reboot so the boot code runs.
+ * A file that doesn't fit is an error, unless asFarAsFits: then it is left out, and its name is
+ * in the list returned (the starter on a Pip-Boy with 128 KB of Storage).
+ */
+export async function loadDumpStorage(manifest, readFile, emu, { asFarAsFits = false } = {}) {
+  const left = [];
   for (const f of manifest.storage ?? []) {
-    emu.storageWrite(f.name, await readFile(f.file));
+    try {
+      emu.storageWrite(f.name, await readFile(f.file));
+    } catch (e) {
+      if (!asFarAsFits) throw e;
+      left.push(f.name);
+    }
   }
   emu.reboot();
+  return left;
 }

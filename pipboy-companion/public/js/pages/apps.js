@@ -2,7 +2,7 @@
 // .js files, and other apps found in the Pip-Boy's Storage.
 import { $, escapeHtml, empty, notify, iconRefresh, pickFiles, confirmDialog } from '../ui.js';
 import { device, session, onDeviceChange } from '../device/state.js';
-import { installApp, removeApp, launcherFor, installExtension, removeExtension, setStartApp, updateLoader } from '../device/bundles.js';
+import { installApp, removeApp, launcherFor, installExtension, removeExtension, setStartApp, updateLoader, sendToSd, removeFromSd } from '../device/bundles.js';
 import { STORAGE_MAX_BYTES } from '../serial/device-ops.js';
 import { formatSize, validateStorageName } from '../../../shared/validate.js';
 
@@ -10,6 +10,7 @@ let catalog = null; // [{ ...entry, bytes }]
 let catalogError = null;
 let extensions = []; // the same, for apps/index.json "extensions"
 let loader = null; // the extension loader (.boot0)
+let holotapes = []; // apps/index.json "holotapes": [{ ...entry, files: [{ path, bytes }] }], run from the SD card
 
 async function loadCatalog() {
   try {
@@ -29,6 +30,10 @@ async function loadCatalog() {
     catalog = await Promise.all(index.apps.map(withBytes));
     extensions = await Promise.all((index.extensions ?? []).map(withBytes));
     loader = index.loader ? await withBytes(index.loader) : null;
+    holotapes = await Promise.all((index.holotapes ?? []).map(async (h) => ({
+      ...h,
+      files: (await Promise.all(h.files.map(async (f) => ({ path: f.path, bytes: await get(f.file) })))).filter((f) => f.bytes),
+    })));
   } catch (e) {
     catalogError = e.message;
     catalog = [];
@@ -98,6 +103,20 @@ function extCard(ext) {
   );
 }
 
+/** A holotape lives only on the SD card, which the device summary doesn't list: no status tag. */
+function holotapeCard(h) {
+  const id = escapeHtml(h.id);
+  const busy = device.busy ? ' disabled' : '';
+  const size = h.files.reduce((n, f) => n + f.bytes.length, 0);
+  return (
+    `<article class="app-card"><div class="app-card-head"><h3>${escapeHtml(h.name)}</h3></div>` +
+    `<p>${escapeHtml(h.description ?? '')}</p><p class="help">${formatSize(size)} on the SD card · no Storage used</p>` +
+    `<div class="row">${h.files.length ? `<button class="btn" data-holotape-install="${id}"${busy}><i data-lucide="download"></i> Copy to the SD card</button>` : ''}` +
+    `<button class="btn danger" data-holotape-remove="${id}"${busy}>Remove</button>` +
+    `<a class="btn secondary" href="/emulator/?app=${encodeURIComponent(h.id)}" target="_blank" rel="noopener"><i data-lucide="monitor-play"></i> Try in emulator</a></div></article>`
+  );
+}
+
 function loaderNotice() {
   const f = loader && device.file(loader.storageName);
   const anyExt = device.info?.files.some(([n]) => /^ext\..+\.js$/.test(n));
@@ -108,6 +127,7 @@ function loaderNotice() {
 function render() {
   loaderNotice();
   $('extensions-catalog').innerHTML = extensions.length ? extensions.map(extCard).join('') : '<p class="help">No extensions in the catalog.</p>';
+  $('holotapes-catalog').innerHTML = holotapes.length ? holotapes.map(holotapeCard).join('') : '<p class="help">No holotapes in the catalog.</p>';
   if (!catalog) {
     $('apps-catalog').innerHTML = '<p class="help">Loading apps…</p>';
   } else {
@@ -180,6 +200,19 @@ export function initApps() {
     if (!ext || !loader) return;
     if (install) installExtension(ext, loader);
     else removeExtension(ext, loader);
+  });
+  $('holotapes-catalog').addEventListener('click', (e) => {
+    const install = e.target.closest('[data-holotape-install]');
+    const remove = e.target.closest('[data-holotape-remove]');
+    const h = holotapes.find((x) => x.id === (install ?? remove)?.dataset[install ? 'holotapeInstall' : 'holotapeRemove']);
+    if (!h) return;
+    if (install) {
+      sendToSd(`Copy ${h.name} to the SD card`, h.files.map((f) => ({ path: f.path, bytes: f.bytes })), {
+        finish: `${h.name} is on the SD card. Find it in INV › APPS in the stock interface (restart the Pip-Boy if the menu is already open).`,
+      });
+    } else {
+      removeFromSd(`Remove ${h.name}`, h.files.map((f) => f.path), { what: `${h.name} is`, finish: `${h.name} was removed.` });
+    }
   });
   onDeviceChange(render);
   render();

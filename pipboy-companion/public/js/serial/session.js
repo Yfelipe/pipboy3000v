@@ -23,7 +23,7 @@ export const IDE_WRITE_CHUNK = 19;
 export const IDE_WRITE_PAUSE_MS = 50;
 export const USB_WRITE_CHUNK = 512;
 /** Logged on connect, so the activity log shows which dashboard code ran (bump on changes). */
-export const CLIENT_VERSION = '2026-11-10.1';
+export const CLIENT_VERSION = '2026-11-11.7';
 /** Sent after every command so the device releases the previous command's reply. */
 export const RELEASE_LINE = '\x10print("")\n';
 /** The Pip-Boy sends one packet of this many bytes (or fewer) per line it runs. */

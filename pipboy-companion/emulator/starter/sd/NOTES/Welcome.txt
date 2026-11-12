@@ -1,0 +1,7 @@
+This is the emulator's starter Pip-Boy.
+
+It has the companion's two apps, Mojave UI and PIP-OS X, with sample notes, lists, messages and radio presets.
+
+Pip-OS itself isn't included: it belongs to The Wand Company. To run the stock interface, add the official update on the emulator's Load tab, or load a dump of your own Pip-Boy. The update comes from The Wand Company's Pip-Boy upgrade page:
+
+https://www.thewandcompany.com/pip-boy/upgrade/

@@ -10,6 +10,8 @@ import { FileStore } from './storage/files.js';
 import { ActivityLog } from './storage/activity.js';
 import { DumpStore } from './storage/dumps.js';
 import { KINDS } from '../shared/validate.js';
+import { pipOsReleaseList, pipOsVariant } from '../emulator/runtime/pipos.js';
+import { createForecast, coordinate } from './forecast.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -55,6 +57,14 @@ function parseId(value) {
   return id;
 }
 
+/**
+ * The addresses the server may listen on. Requests are only answered when their Host is this
+ * machine (see hostAllowed), so listening anywhere else would only expose a port that refuses
+ * everything.
+ */
+export const LOOPBACK_HOSTS = Object.freeze(['127.0.0.1', '::1', 'localhost']);
+export const isLoopbackHost = (host) => LOOPBACK_HOSTS.includes(String(host).toLowerCase());
+
 /** Only answer requests addressed to this machine by name (blocks DNS-rebinding). */
 function hostAllowed(hostHeader, allowedHosts) {
   if (!hostHeader) return false;
@@ -68,10 +78,14 @@ export async function createApp({
   sharedDir = path.join(ROOT, 'shared'),
   emulatorDir = path.join(ROOT, 'emulator'),
   appsDir = path.join(ROOT, 'apps'),
+  assetsDir = path.join(ROOT, 'assets'),
   allowedHosts = ['localhost', '127.0.0.1', '::1'],
   maxUploadBytes = 200 * 1024 * 1024,
   logger = console,
+  fetchImpl = globalThis.fetch, // for the Pip-OS release index; tests pass their own
 } = {}) {
+  const weather = createForecast({ fetchImpl }); // Open-Meteo, only when the dashboard asks
+  const piposReleases = new Map(); // variant id -> { at, releases }, kept for an hour
   const records = new RecordStore(dataDir, { logger });
   const files = new FileStore(dataDir, { maxBytes: maxUploadBytes });
   const activity = new ActivityLog(dataDir);
@@ -85,8 +99,9 @@ export async function createApp({
   const serveShared = createStaticHandler(sharedDir, '/shared/');
   // The emulator (emulator/README.md) is a standalone page; only its web-facing parts are served
   const serveEmulator = createStaticHandler(emulatorDir, '/emulator/');
-  const EMULATOR_PUBLIC = /^\/emulator\/(index\.html)?$|^\/emulator\/(web|runtime|dist)\//;
+  const EMULATOR_PUBLIC = /^\/emulator\/(index\.html)?$|^\/emulator\/(web|runtime|dist|starter)\//;
   const serveApps = createStaticHandler(appsDir, '/apps/'); // Pip-Boy apps (apps/index.json)
+  const serveAssets = createStaticHandler(assetsDir, '/assets/'); // pictures the dashboard draws with (ID card emblems)
 
   // [method, regex, handler(req, res, match, url)]
   const routes = [
@@ -179,6 +194,32 @@ export async function createApp({
       await pipeline(file.stream, res);
     }],
 
+    // A variant's Pip-OS releases from The Wand Company's public index, for the emulator's
+    // download selects. Read here rather than in the page: their CDN needn't allow other sites
+    // to read it. Only the variants in emulator/runtime/pipos.js; each kept for an hour.
+    ['GET', /^\/api\/pipos-releases$/, async (req, res, m, url) => {
+      const variant = pipOsVariant(url.searchParams.get('variant') || 'blueprint');
+      if (!variant) throw new AppError(400, 'validation', 'Unknown variant');
+      let hit = piposReleases.get(variant.id);
+      if (!hit || Date.now() - hit.at > 3600_000) {
+        hit = { at: Date.now(), releases: await pipOsReleaseList({ feed: variant.feed, fetch: fetchImpl }) };
+        if (hit.releases) piposReleases.set(variant.id, hit); // a failure isn't kept: try again next time
+      }
+      sendJson(res, 200, { variant: variant.id, releases: hit.releases });
+    }],
+
+    // The wasteland forecast (server/forecast.js): weather for a place, and finding a place by name
+    ['GET', /^\/api\/forecast$/, async (req, res, m, url) => {
+      const lat = coordinate(url.searchParams.get('lat'), 90, 'lat');
+      const lon = coordinate(url.searchParams.get('lon'), 180, 'lon');
+      sendJson(res, 200, { lat, lon, source: 'Open-Meteo', ...(await weather.forecast(lat, lon)) });
+    }],
+    ['GET', /^\/api\/places$/, async (req, res, m, url) => {
+      const name = (url.searchParams.get('name') ?? '').trim();
+      if (name.length < 2 || name.length > 80) throw new AppError(400, 'validation', 'Type a place name of 2 to 80 characters');
+      sendJson(res, 200, { places: await weather.search(name) });
+    }],
+
     ['GET', /^\/api\/logs$/, (req, res, m, url) => {
       const limit = Math.min(5000, Math.max(1, Number(url.searchParams.get('limit')) || 1000));
       sendJson(res, 200, { entries: activity.list({ limit, q: url.searchParams.get('q') || '' }) });
@@ -238,7 +279,8 @@ export async function createApp({
       return;
     }
     if (EMULATOR_PUBLIC.test(pathname) && (await serveEmulator(req, res, pathname))) return;
-    if (/^\/apps\/.*\.(js|json|ext)$/i.test(pathname) && (await serveApps(req, res, pathname))) return;
+    if (/^\/apps\/.*\.(js|json|ext|img|wav)$/i.test(pathname) && (await serveApps(req, res, pathname))) return;
+    if (/^\/assets\/official\/[^/]+\.(png|jpe?g|svg)$/i.test(pathname) && (await serveAssets(req, res, pathname))) return;
     if (await servePublic(req, res, pathname)) return;
     if (pathname === '/vendor/lucide.min.js') {
       // No local copy of the icons yet (npm run vendor): an empty script, so the page can fall

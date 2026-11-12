@@ -280,11 +280,16 @@ describe('browser end-to-end', { skip: chromium ? false : 'playwright is not ins
     await page.click('#backup-list [data-backup-restore]');
     await page.waitForSelector('#dialog[open]');
     assert.match(await page.textContent('#dialog-body'), /a\.txt/);
+    assert.match(await page.textContent('#dialog-body'), /backed up first/);
+    assert.match(await page.textContent('#dialog-body'), /no \.bootcde/); // this backup has no firmware
     await page.click('#dialog-ok');
     await jobDone(page, 60_000);
     assert.equal(await page.getAttribute('#job', 'data-state'), 'done');
+    assert.match(await page.textContent('#job'), /before is saved as pipboy-storage-backup-/);
     const files = await page.evaluate(() => Object.fromEntries(window.__fakeDevice.storage));
     assert.deepEqual(files, { 'a.txt': 'AAA', 'b.txt': 'BBB' });
+    // The changed Storage was backed up before it was replaced: two backups are listed now
+    await page.waitForFunction(() => document.querySelectorAll('#backup-list [data-backup-restore]').length === 2);
     await context.close();
   });
 

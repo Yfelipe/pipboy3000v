@@ -111,13 +111,19 @@ export async function freeUpSpace({ extra = [], title = 'Free up space', confirm
   });
 }
 
-/** Replace Storage with a backup's files (entries from parseStorageBackup). */
+/**
+ * Replace Storage with a backup's files (entries from parseStorageBackup). What's in Storage
+ * now is backed up first, so a wrong or partial backup can be undone.
+ */
 export async function restoreStorage(entries, sourceName) {
   if (!(await ensureConnected())) return null;
   const ok = await confirmDialog({
     title: 'Restore this backup?',
     body: [
       `Everything in the Pip-Boy’s Storage will be replaced with the ${entries.length} file(s) in ${sourceName}. Files that aren’t in the backup are removed.`,
+      'What’s in Storage now is backed up first (downloaded, and listed on the Backup page), so you can go back.',
+      ops.lacksFirmware(entries) &&
+        `This backup has no ${ops.FIRMWARE_FILE}, the file that holds Pip-OS. After restoring, the Pip-Boy has no stock interface until you install The Wand Company’s official update again.`,
       'Keep the USB cable connected. It takes a couple of minutes, then the Pip-Boy restarts.',
     ],
     details: entries.map(([n, b]) => `${n} · ${kb(b.length)}`),
@@ -125,10 +131,44 @@ export async function restoreStorage(entries, sourceName) {
     danger: true,
   });
   if (!ok) return null;
+  let backupError = null;
+  const result = await runJob('Restore a backup', async (j) => {
+    let saved = null;
+    try {
+      saved = await backupBeforeRestore(j);
+    } catch (e) {
+      backupError = e;
+      throw e;
+    }
+    await rebuildSteps(j, entries);
+    j.finish(`Restored ${entries.length} file(s) from ${sourceName}.${saved ? ` What was in Storage before is saved as ${saved}.` : ''}`);
+  });
+  if (result.ok || !backupError || /cancel/i.test(backupError.message) || !session.connected) return result;
+  // A Pip-Boy whose Storage is damaged may be the reason for restoring: let the person go on
+  const anyway = await confirmDialog({
+    title: 'Restore without a backup?',
+    body: [
+      `What’s in Storage now couldn’t be backed up: ${explain(backupError)}`,
+      `Restoring anyway replaces it with the ${entries.length} file(s) in ${sourceName}. What’s in Storage now will be lost.`,
+    ],
+    confirm: 'Restore without a backup',
+    danger: true,
+  });
+  if (!anyway) return result;
   return runJob('Restore a backup', async (j) => {
     await rebuildSteps(j, entries);
     j.finish(`Restored ${entries.length} file(s) from ${sourceName}.`);
   });
+}
+
+/** Save what's in Storage before a restore replaces it. Resolves the backup's name, or null if Storage is empty. */
+async function backupBeforeRestore(j) {
+  j.step('Backing up what’s in Storage now');
+  const { backup, skipped } = await ops.storageBackup(session, { onProgress: j.progress });
+  if (skipped.length) log(`Backup before restore skipped ${skipped.length} file(s) with names that cannot be restored: ${skipped.join(', ')}`, 'error');
+  if (!Object.keys(backup.files).length) return null;
+  j.step('Saving the backup on this computer');
+  return saveBackup(backup, { required: true });
 }
 
 export function restartPipBoy() {
@@ -230,6 +270,26 @@ export async function deleteFromSd(title, rel) {
     const hit = folder && (await ops.sdListDir(session, folder.path)).find((e) => !e.dir && e.name.toUpperCase() === file.toUpperCase());
     if (hit) await ops.sdDelete(session, hit.path);
     j.finish(hit ? `${rel} was deleted.` : `${rel} wasn't on the SD card.`);
+  }, { refresh: false });
+}
+
+/** Delete several "DIR/NAME" files from the SD card as one job, after asking. */
+export async function removeFromSd(title, paths, { what, finish } = {}) {
+  if (!(await ensureConnected())) return null;
+  const ok = await confirmDialog({
+    title: `${title}?`,
+    body: `${what ?? 'These files are'} deleted from the Pip-Boy’s SD card. You can copy ${paths.length === 1 ? 'it' : 'them'} again any time.`,
+    details: paths,
+    confirm: 'Remove',
+    danger: true,
+  });
+  if (!ok) return null;
+  return runJob(title, async (j) => {
+    for (const rel of paths) {
+      j.step(`Deleting ${rel}`);
+      await deleteSdPath(rel);
+    }
+    j.finish(finish ?? `${title}: done.`);
   }, { refresh: false });
 }
 

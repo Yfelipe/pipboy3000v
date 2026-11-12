@@ -1,0 +1,8 @@
+{
+  "env": {
+    "VERSION": "2v29.400",
+    "BOARD": "PIPBOY",
+    "STORAGE": 131072
+  },
+  "starter": true
+}

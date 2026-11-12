@@ -3,6 +3,7 @@
     {
       "id": "mojave",
       "name": "Mojave UI",
+      "tag": "New Vegas, amber",
       "description": "Alternative Pip-Boy interface in the style of the TV series' second season: amber New Vegas theme, faction reputation, quest log, Mojave map, Pip-OS 1.33's ID card, feeds and lists, plus FM radio presets, a media remote, notes and an inbox.",
       "board": "pipboy",
       "file": "mojave/mojave.min.js",
@@ -25,6 +26,7 @@
     {
       "id": "pipos-x",
       "name": "PIP-OS X (concept)",
+      "tag": "Holographic concept",
       "description": "A futuristic take on the Pip-Boy: holographic rings and radar, S.P.E.C.I.A.L. chart, V.A.T.S. targeting, rotating wireframes, the device's own Vault Boy and map animations, Pip-OS 1.33's ID card, feeds and lists, plus FM radio presets, a media remote, notes and an inbox.",
       "board": "pipboy",
       "file": "pipos-x/pipos-x.min.js",
@@ -43,6 +45,110 @@
           "path": "USER/PIPOSX.EXT"
         }
       ]
+    },
+    {
+      "id": "capital",
+      "name": "Capital UI",
+      "tag": "Fallout 3",
+      "description": "Alternative Pip-Boy interface in the style of Fallout 3: green phosphor, skills, the main quest line, the Capital Wasteland map and D.C. radio stations, Pip-OS 1.33's ID card, feeds and lists, plus FM radio presets, a media remote, notes and an inbox.",
+      "board": "pipboy",
+      "file": "capital/capital.min.js",
+      "storageName": "capital.min.js",
+      "pages": [
+        3,
+        6,
+        8,
+        1,
+        1
+      ],
+      "launcher": "USER/CAPITAL.JS",
+      "sdFiles": [
+        {
+          "file": "capital/sd/USER/CAPITAL.EXT",
+          "path": "USER/CAPITAL.EXT"
+        }
+      ]
+    },
+    {
+      "id": "pip2000",
+      "name": "Pip-Boy 2000",
+      "tag": "Fallout 1 & 2",
+      "description": "Alternative Pip-Boy interface in the style of Fallout and Fallout 2: Vault 13, the eighteen original skills, the hunt for the water chip and a map of Southern California, plus Pip-OS 1.33's ID card, feeds and lists, FM radio presets, a media remote, notes and an inbox.",
+      "board": "pipboy",
+      "file": "pip2000/pip2000.min.js",
+      "storageName": "pip2000.min.js",
+      "pages": [
+        3,
+        6,
+        8,
+        1,
+        1
+      ],
+      "launcher": "USER/PIP2000.JS",
+      "sdFiles": [
+        {
+          "file": "pip2000/sd/USER/PIP2000.EXT",
+          "path": "USER/PIP2000.EXT"
+        }
+      ]
+    },
+    {
+      "id": "endurance",
+      "name": "Endurance",
+      "tag": "Interstellar",
+      "description": "A flight-deck interface based on the film Interstellar (2014): the turning ring, the crew, the robot's humor and honesty settings, the three candidate worlds, Plan A and Plan B, a time-slip calculator, a watch and the route through the wormhole, plus Pip-OS 1.33's ID card, feeds and lists, FM radio presets, a media remote, notes and an inbox. With the film's title, the black hole as it was rendered for the film, and Hamilton's Murph watch, used with permission.",
+      "board": "pipboy",
+      "file": "endurance/endurance.min.js",
+      "storageName": "endurance.min.js",
+      "pages": [
+        3,
+        3,
+        9,
+        2,
+        1
+      ],
+      "launcher": "USER/ENDURANC.JS",
+      "sdFiles": [
+        {
+          "file": "endurance/sd/USER/ENDURANC.EXT",
+          "path": "USER/ENDURANC.EXT"
+        },
+        {
+          "file": "endurance/sd/ENDURANC/TITLE.IMG",
+          "path": "ENDURANC/TITLE.IMG"
+        },
+        {
+          "file": "endurance/sd/ENDURANC/GARGANTU.IMG",
+          "path": "ENDURANC/GARGANTU.IMG"
+        },
+        {
+          "file": "endurance/sd/ENDURANC/MURPH.IMG",
+          "path": "ENDURANC/MURPH.IMG"
+        }
+      ]
+    },
+    {
+      "id": "tars",
+      "name": "TARS",
+      "tag": "Interstellar",
+      "description": "The Pip-Boy as the robot from the film Interstellar (2014): four hinged slabs on every screen, a start-up console, humor, honesty, trust and discretion settings that decide what it says (with a cue light when it's joking), questions to ask it, a docking game and Morse code by screen flash, plus Pip-OS 1.33's ID card, feeds and lists, FM radio presets, a media remote, notes and an inbox. Its settings are shared with Endurance.",
+      "board": "pipboy",
+      "file": "tars/tars.min.js",
+      "storageName": "tars.min.js",
+      "pages": [
+        1,
+        2,
+        7,
+        1,
+        1
+      ],
+      "launcher": "USER/TARS.JS",
+      "sdFiles": [
+        {
+          "file": "tars/sd/USER/TARS.EXT",
+          "path": "USER/TARS.EXT"
+        }
+      ]
     }
   ],
   "loader": {
@@ -53,7 +159,7 @@
     {
       "id": "remote",
       "name": "Media remote",
-      "description": "Adds INV \u203a REMOTE: the wheels control volume, play/pause and tracks on the computer the Pip-Boy is plugged into (USB media keys).",
+      "description": "Adds INV › REMOTE: the wheels control volume, play/pause and tracks on the computer the Pip-Boy is plugged into (USB media keys).",
       "file": "extensions/min/remote.js",
       "storageName": "ext.remote.js"
     },
@@ -67,16 +173,134 @@
     {
       "id": "notes",
       "name": "Notes",
-      "description": "Adds DATA \u203a NOTES: text notes from the SD card, made on the companion's ID, lists & notes page.",
+      "description": "Adds DATA › NOTES: text notes from the SD card, made on the companion's ID, lists & notes page.",
       "file": "extensions/min/notes.js",
       "storageName": "ext.notes.js"
     },
     {
       "id": "inbox",
       "name": "Inbox",
-      "description": "Adds STAT \u203a INBOX to the stock interface: messages you send from the companion's Home page, kept on the SD card to read later.",
+      "description": "Adds STAT › INBOX to the stock interface: messages you send from the companion's Home page, kept on the SD card to read later.",
       "file": "extensions/min/inbox.js",
       "storageName": "ext.inbox.js"
+    }
+  ],
+  "holotapes": [
+    {
+      "id": "hack",
+      "name": "Terminal hacking",
+      "tag": "Password puzzle",
+      "description": "The password puzzle from the terminals of Fallout 3, New Vegas and 4: pick the right word from eight in four attempts, with a likeness score after each guess.",
+      "files": [
+        {
+          "file": "holotapes/sd/USER/HACKING.JS",
+          "path": "USER/HACKING.JS"
+        },
+        {
+          "file": "holotapes/sd/APPINFO/HACKING.json",
+          "path": "APPINFO/HACKING.json"
+        }
+      ]
+    },
+    {
+      "id": "lockpick",
+      "name": "Lockpicking",
+      "tag": "Bobby-pin lock",
+      "description": "The bobby-pin lock from Fallout 3, New Vegas and 4: find the sweet spot with the wheel before your pins break. Four locks, Novice to Master.",
+      "files": [
+        {
+          "file": "holotapes/sd/USER/LOCKPICK.JS",
+          "path": "USER/LOCKPICK.JS"
+        },
+        {
+          "file": "holotapes/sd/APPINFO/LOCKPICK.json",
+          "path": "APPINFO/LOCKPICK.json"
+        }
+      ]
+    },
+    {
+      "id": "caps",
+      "name": "Cap Collector",
+      "tag": "Arcade game",
+      "description": "A small arcade game in the spirit of the holotape games: slide the crate under the falling bottle caps and keep the mini nukes out of it.",
+      "files": [
+        {
+          "file": "holotapes/sd/USER/CAPS.JS",
+          "path": "USER/CAPS.JS"
+        },
+        {
+          "file": "holotapes/sd/APPINFO/CAPS.json",
+          "path": "APPINFO/CAPS.json"
+        }
+      ]
+    },
+    {
+      "id": "fmscan",
+      "name": "FM scan",
+      "tag": "Scan the FM band",
+      "description": "Sweeps the FM band with the Pip-Boy's own radio, draws the signal strength across the dial and lists the strongest stations to tune to. Needs the stock interface.",
+      "files": [
+        {
+          "file": "holotapes/sd/USER/FMSCAN.JS",
+          "path": "USER/FMSCAN.JS"
+        },
+        {
+          "file": "holotapes/sd/APPINFO/FMSCAN.json",
+          "path": "APPINFO/FMSCAN.json"
+        }
+      ]
+    },
+    {
+      "id": "clock",
+      "name": "Stand clock",
+      "tag": "Clock faces",
+      "description": "A clock for when the Pip-Boy sits on its stand: big time, the date, and Vault-Tec, RobCo and Nuka-Cola faces. Keeps the Pip-Boy awake while USB power is connected.",
+      "files": [
+        {
+          "file": "holotapes/sd/USER/CLOCK.JS",
+          "path": "USER/CLOCK.JS"
+        },
+        {
+          "file": "holotapes/sd/APPINFO/CLOCK.json",
+          "path": "APPINFO/CLOCK.json"
+        },
+        {
+          "file": "holotapes/sd/CLOCK/VAULTTEC.IMG",
+          "path": "CLOCK/VAULTTEC.IMG"
+        },
+        {
+          "file": "holotapes/sd/CLOCK/ROBCO.IMG",
+          "path": "CLOCK/ROBCO.IMG"
+        },
+        {
+          "file": "holotapes/sd/CLOCK/NUKACOLA.IMG",
+          "path": "CLOCK/NUKACOLA.IMG"
+        }
+      ]
+    },
+    {
+      "id": "levelup",
+      "name": "Level up",
+      "tag": "XP from your lists",
+      "description": "Experience points for real tasks: every item ticked off in your lists is worth 10 XP. Earn enough and you level up, with Vault Boy and the level-up sound.",
+      "files": [
+        {
+          "file": "holotapes/sd/USER/LEVELUP.JS",
+          "path": "USER/LEVELUP.JS"
+        },
+        {
+          "file": "holotapes/sd/APPINFO/LEVELUP.json",
+          "path": "APPINFO/LEVELUP.json"
+        },
+        {
+          "file": "holotapes/sd/LEVELUP/VAULTBOY.IMG",
+          "path": "LEVELUP/VAULTBOY.IMG"
+        },
+        {
+          "file": "holotapes/sd/LEVELUP/LEVELUP.WAV",
+          "path": "LEVELUP/LEVELUP.WAV"
+        }
+      ]
     }
   ]
 }

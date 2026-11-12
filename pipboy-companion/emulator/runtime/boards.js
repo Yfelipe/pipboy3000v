@@ -26,6 +26,7 @@ export const BOARDS = {
 
   pipboy: {
     id: 'pipboy',
+    family: 'pipboy',
     name: 'Pip-Boy 3000 Mk V',
     wasm: 'pipboy_wasm.wasm',
     storageBytes: 32 * 4096,
@@ -78,5 +79,80 @@ export const BOARDS = {
       LED3: { pin: 'E6', color: '#36f', activeLow: true },
       LED4: { pin: 'E3', color: '#fb3', activeLow: true },
     },
+  },
+};
+
+// The Pip-Boy with 512 KB of Storage instead of 128 KB (espruino/boards/PIPBOY_XL_WASM.py), so
+// Pip-OS, both of the companion's apps and the extensions fit at once. Emulator only: use
+// `pipboy` to check that something fits on a real Pip-Boy.
+BOARDS['pipboy-xl'] = {
+  ...BOARDS.pipboy,
+  id: 'pipboy-xl',
+  name: 'Pip-Boy 3000 Mk V · 512 KB Storage',
+  wasm: 'pipboy_xl_wasm.wasm',
+  storageBytes: 128 * 4096,
+};
+
+// PROTOTYPE: the Fallout 3 / New Vegas Pip-Boy 3000 ("FO3", board SAPLING), built to run The Wand
+// Company's FO3 firmware (added from its update zip on the emulator's Load tab). The firmware
+// names its pins (BTN_STATS, ENC1_A, MODE_SELECTOR ...); which pin each name is on is this
+// emulator's choice, made in web/sapling-boot0.js, with the Mk V's pin wherever the two share a
+// part. espruino/boards/SAPLING_WASM.py is the build.
+BOARDS.fo3 = {
+  id: 'fo3',
+  family: 'sapling',
+  name: 'Pip-Boy 3000 (FO3) · prototype',
+  wasm: 'sapling_wasm.wasm',
+  storageBytes: 64 * 4096,
+  demo: 'web/fo3-controls.js', // boot code the emulator page gives it on a blank Storage: a control test
+  boot0: 'web/sapling-boot0.js', // the FO3's pin names and native stand-ins, written as .boot0 with it
+  buttons: {
+    BTN_POWER: { pin: 'A0', label: 'Power', key: 'Escape', activeLow: true },
+    ENC1_PRESS: { pin: 'A3', label: 'Click select', key: 'Enter', activeLow: true },
+    // the three illuminated mode select buttons under the screen
+    BTN_STATS: { pin: 'A1', label: 'STATS', key: 'KeyS', activeLow: true },
+    BTN_ITEMS: { pin: 'E1', label: 'ITEMS', key: 'KeyI', activeLow: true },
+    BTN_DATA: { pin: 'E2', label: 'DATA', key: 'KeyD', activeLow: true },
+  },
+  encoders: {
+    // ENC1: the left wheel (primary scroll); ENC2: the top wheel (secondary scroll)
+    primary: { a: 'B1', b: 'B0', label: 'Primary scroll', keys: ['ArrowUp', 'ArrowDown'], activeLow: true },
+    secondary: { a: 'A10', b: 'A8', label: 'Secondary scroll', keys: ['ArrowLeft', 'ArrowRight'], activeLow: true },
+  },
+  selectors: {
+    // MODE_SELECTOR, the page select knob, as the firmware decodes it: above 0.7 is the first page,
+    // then 0.5, 0.3, 0.1 and below for the fifth; over 0.9 means "between positions"
+    page: {
+      pin: 'A7',
+      label: 'Page',
+      enable: { pin: 'C4', level: 0 }, // MEAS_ENB
+      keys: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'],
+      positions: [
+        { label: '1', value: 0.8 },
+        { label: '2', value: 0.6 },
+        { label: '3', value: 0.4 },
+        { label: '4', value: 0.2 },
+        { label: '5', value: 0.0 },
+      ],
+    },
+  },
+  inputs: { ...BOARDS.pipboy.inputs, B10: 1, B11: 1, C7: 1 }, // the external I2C bus idles high too, and ACCEL_INT
+  // emulated I2C chips (runtime/i2c.js), at the addresses the FO3 firmware uses
+  i2c: [
+    { bus: 1, address: 0x0f, model: 'kxtj3', interrupt: 'C7' }, // accelerometer; ACCEL_INT (active low)
+    { bus: 1, address: 0x10, model: 'registers', regs: { 72: 78 } }, // audio codec: answers, makes no sound; radio volume starts at 5 of 10
+    { bus: 2, address: 0x11, model: 'rda5807' }, // FM radio
+  ],
+  motion: true, // the emulator page shows Tap and Shake
+  analog: BOARDS.pipboy.analog,
+  leds: {
+    LED_STATS: { pin: 'E7', color: '#fb3' },
+    LED_ITEMS: { pin: 'E8', color: '#fb3' },
+    LED_DATA: { pin: 'E9', color: '#fb3' },
+    LED_TORCH: { pin: 'E11', color: '#fff' },
+    LED_DOWNFIRE: { pin: 'E10', color: '#ffe680' },
+    LED_RED: { pin: 'E4', color: '#e33', activeLow: true },
+    LED_GREEN: { pin: 'E5', color: '#3c3', activeLow: true },
+    LED_BLUE: { pin: 'E6', color: '#36f', activeLow: true },
   },
 };

@@ -15,7 +15,7 @@
 // Controls (as on the stock firmware): mode dial = tabs, thumbwheel = sub-pages,
 // wheel = scroll, wheel press = select, PLAY = radio on/off, torch = flashlight, power = exit.
 
-import { feeds, hasIdCard, ID_CARD, blitRaw, readLists, setDone, modeFor, fallbackMode, stockPalette } from "../shared/pipos133.js";
+import { feeds, hasIdCard, ID_CARD, blitRaw, readLists, setDone, modeFor, fallbackMode, stockPalette, charSheet } from "../shared/pipos133.js";
 
 (function () {
   // ------------------------------------------------------------------ hardware
@@ -43,6 +43,7 @@ import { feeds, hasIdCard, ID_CARD, blitRaw, readLists, setDone, modeFor, fallba
 
   // ------------------------------------------------------------------ settings & theme
   const SETTINGS_FILE = "pipos-x.json";
+  const SHEET = charSheet(); // level and S.P.E.C.I.A.L. from the companion, if the SD card has them
   const cfg = Object.assign({ theme: 0, sound: true, bright: 3 }, require("Storage").readJSON(SETTINGS_FILE, true) || {});
   const save = () => require("Storage").writeJSON(SETTINGS_FILE, cfg);
 
@@ -52,6 +53,10 @@ import { feeds, hasIdCard, ID_CARD, blitRaw, readLists, setDone, modeFor, fallba
     { name: "AMBER", rgb: [1, 0.71, 0.26] },
     { name: "INSTITUTE", rgb: [0.75, 0.9, 1] },
     { name: "PIP-BOY", rgb: [0.2, 1, 0.3], stock: true }, // the stock interface's own colour
+    // New themes go at the end: the saved setting is a position in this list
+    { name: "LEGION", rgb: [1, 0.27, 0.2] },     // Caesar's crimson
+    { name: "NCR", rgb: [0.92, 0.82, 0.55] },    // desert khaki
+    { name: "ENCLAVE", rgb: [0.45, 0.8, 1] },    // cold blue
   ];
 
   function applyTheme() {
@@ -235,7 +240,7 @@ import { feeds, hasIdCard, ID_CARD, blitRaw, readLists, setDone, modeFor, fallba
       ["INT", "Intelligence", 9, "Experience earned, hacking, and more from every terminal."],
       ["AGI", "Agility", 7, "Action Points for V.A.T.S. and sneaking."],
       ["LCK", "Luck", 4, "Critical hits, and what turns up in the junk."],
-    ],
+    ].map((r, i) => SHEET ? [r[0], r[1], E.clip(SHEET.special[i] | 0, 1, 10), r[3]] : r),
     draw(b, d) {
       // Heptagon radar chart with a rotating sweep
       const cx = 104, cy = 104, R = 84, ang = (i) => -Math.PI / 2 + (i * Math.PI * 2) / 7;

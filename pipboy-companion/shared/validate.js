@@ -8,7 +8,7 @@ export const FM_MIN = 87.5;
 export const FM_MAX = 108;
 export const BACKUP_FORMAT = 'pip-boy-companion-backup';
 
-export const MEDIA_EXTENSIONS = Object.freeze(['mp3', 'wav', 'ogg', 'jpg', 'jpeg', 'png', 'mp4', 'txt']);
+export const MEDIA_EXTENSIONS = Object.freeze(['mp3', 'wav', 'ogg', 'avi', 'jpg', 'jpeg', 'png', 'mp4', 'txt']);
 export const MEDIA_MAX_BYTES = 100 * 1024 * 1024;
 
 export const SETTINGS_OPTIONS = Object.freeze({

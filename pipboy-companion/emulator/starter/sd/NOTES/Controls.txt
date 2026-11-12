@@ -1,0 +1,7 @@
+Mode dial: tabs
+Thumbwheel: pages
+Wheel: scroll
+Wheel press: select
+PLAY: radio
+Torch: flashlight
+Power: back to the starter menu

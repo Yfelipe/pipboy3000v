@@ -21,6 +21,8 @@
     <span id="status" class="status">Starting…</span>
     <button id="reset" title="reset(): clear RAM, keep Storage">Reset</button>
     <button id="reboot" title="Power cycle: run the boot code again">Reboot</button>
+    <label class="check sound" title="Play the board's sound on this computer (starts after your first click on the page)"><input type="checkbox" id="sound" checked> Sound</label>
+    <input type="range" id="volume" min="0" max="1" step="0.05" value="0.8" aria-label="Volume">
     <a class="link" href="/">← Dashboard</a>
   </header>
 
@@ -33,12 +35,19 @@
 
     <section class="side">
       <nav class="tabs" role="tablist">
-        <button role="tab" aria-selected="true" data-tab="console">Console</button>
+        <button role="tab" aria-selected="true" data-tab="run">Run</button>
+        <button role="tab" aria-selected="false" data-tab="console">Console</button>
         <button role="tab" aria-selected="false" data-tab="program">Program</button>
         <button role="tab" aria-selected="false" data-tab="load">Load</button>
       </nav>
 
-      <div class="tab" id="tab-console">
+      <div class="tab" id="tab-run">
+        <p class="note">Choose what to run on the emulated Pip-Boy. An app takes over the screen; its power button comes back to the starter menu. A holotape is a small game or tool.</p>
+        <div id="apps" class="launcher"><p class="note">Loading…</p></div>
+        <p id="app-about" class="about" aria-live="polite"></p>
+      </div>
+
+      <div class="tab" id="tab-console" hidden>
         <pre id="terminal" class="terminal" aria-label="Espruino console. Click to type."></pre>
         <div class="row">
           <button id="ctrl-c" title="Interrupt running code (Ctrl-C)">Ctrl-C</button>
@@ -74,19 +83,37 @@ g.drawString("Hello from Espruino", 20, 20);
       </div>
 
       <div class="tab" id="tab-load" hidden>
-        <h2>Device dump</h2>
-        <p class="note">A dump made on the dashboard's Full Mode page: its Storage goes into flash, its SD card files onto the emulated card.</p>
+        <label class="check"><input type="checkbox" id="extra-storage" checked> Extra Storage: 512 KB instead of the Pip-Boy's 128 KB, so Pip-OS and the apps fit. Emulator only, and used the next time you load something below. Untick it to check that something fits on a real Pip-Boy.</label>
+
+        <details class="section" open>
+        <summary>Starter Pip-Boy or a dump</summary>
+        <p class="note">The <strong>starter Pip-Boy</strong> needs no device: the companion's apps and holotapes with sample notes, lists, messages and radio presets. Or a dump made on the dashboard's Backup &amp; restore page: its Storage goes into flash, its SD card files onto the emulated card.</p>
         <div class="row">
           <select id="dumps" aria-label="Dumps"><option value="">Loading…</option></select>
           <button id="load-dump" class="primary">Load dump</button>
         </div>
         <label class="button">Load a dump folder from disk…<input id="dump-folder" type="file" hidden></label>
 
-        <h2>Apps</h2>
-        <p class="note">Apps from the project's <code>apps/</code> folder. Installing writes the app to Storage and runs it with <code>load()</code>; the device's firmware stays in place (on the Pip-Boy app, the power button returns to it).</p>
-        <div id="apps" class="apps"><p class="note">Loading…</p></div>
+        </details>
 
-        <h2>SD card</h2>
+        <details class="section">
+        <summary>Add Pip-OS (the stock interface)</summary>
+        <p class="note">The stock interface isn't included: Pip-OS belongs to The Wand Company. They publish each update as a zip (the one their <a href="https://www.thewandcompany.com/pip-boy/upgrade/" target="_blank" rel="noopener">Pip-Boy upgrade page</a> installs): download it with the button below, then add it here as it is. Its files go on the emulated SD card and FW.JS becomes the boot code, as on the device. Storage starts again with Pip-OS and the starter's apps (with Extra Storage they all fit). A dump of your own Pip-Boy already has Pip-OS.</p>
+        <div class="row">
+          <select id="pipos-variant" aria-label="Pip-Boy variant"></select>
+          <select id="pipos-version" aria-label="Pip-OS version" disabled><option value="">Loading…</option></select>
+        </div>
+        <p class="note" id="pipos-hint" hidden></p>
+        <p class="row"><a id="pipos-download" class="button" href="https://www.thewandcompany.com/pip-boy/upgrade/" target="_blank" rel="noopener">Get Pip-OS from The Wand Company</a> <a id="pipos-notes" class="link" href="#" target="_blank" rel="noopener" hidden>Release notes</a></p>
+        <div class="row">
+          <label class="button">Add the update zip…<input id="pipos-zip" type="file" accept=".zip,application/zip" hidden></label>
+          <label class="button">…or its unzipped folder<input id="pipos-folder" type="file" hidden></label>
+        </div>
+
+        </details>
+
+        <details class="section">
+        <summary>SD card files</summary>
         <p class="note">Copy a folder onto the emulated card, e.g. a copy of the real card to add videos the dump skipped. Files with the same path are replaced.</p>
         <div class="row">
           <label class="button">Add folder…<input id="sd-folder" type="file" hidden></label>
@@ -94,10 +121,14 @@ g.drawString("Hello from Espruino", 20, 20);
         </div>
         <p id="sd-summary" class="note"></p>
 
-        <h2>Storage</h2>
+        </details>
+
+        <details class="section">
+        <summary>Storage files</summary>
         <p class="note">Write files into flash, as <code>require("Storage").write(name, data)</code>.</p>
         <label class="button">Add files…<input id="storage-files" type="file" multiple hidden></label>
         <button id="erase-storage" class="danger">Erase all Storage</button>
+        </details>
       </div>
     </section>
   </main>

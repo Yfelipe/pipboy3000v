@@ -16,6 +16,7 @@
     "emulator": "node emulator/cli.js",
     "emulator:build": "emulator/build.sh",
     "vendor": "node scripts/vendor.mjs",
-    "apps:build": "apps/mojave/build.sh && apps/pipos-x/build.sh && apps/extensions/build.sh"
+    "apps:build": "apps/mojave/build.sh && apps/pipos-x/build.sh && apps/capital/build.sh && apps/pip2000/build.sh && apps/endurance/build.sh && apps/tars/build.sh && apps/extensions/build.sh && apps/holotapes/build.sh && node scripts/build-starter.mjs",
+    "starter:build": "node scripts/build-starter.mjs"
   }
 }

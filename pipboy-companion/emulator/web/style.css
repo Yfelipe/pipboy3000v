@@ -115,6 +115,7 @@ kbd {
   background: #1d2a22;
   border: 1px solid var(--line);
 }
+.led { --c: #3c3; } /* app.js sets each LED's own colour */
 .led.on { background: var(--c); box-shadow: 0 0 10px var(--c); }
 
 .side {
@@ -177,14 +178,36 @@ textarea {
   tab-size: 2;
 }
 
-.apps { display: grid; gap: 8px; }
-.app {
-  display: grid;
-  gap: 4px;
-  justify-items: start;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel2);
-}
-.app strong { color: var(--bright); }
+/* Run tab: a tile for each app and holotape, and one line saying what the tile under the pointer is */
+.launcher { display: grid; gap: 14px; }
+.launcher h2 { margin: 0 0 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
+.tile { display: grid; gap: 3px; align-content: start; text-align: left; padding: 10px 12px; min-height: 60px; }
+.tile strong { font: 600 16px/1.1 "Rajdhani", sans-serif; letter-spacing: .04em; color: var(--bright); }
+.tile span { font-size: 11px; line-height: 1.3; color: var(--muted); }
+.tile[aria-pressed="true"] { background: #25422c; border-color: var(--green); }
+.tile[aria-pressed="true"] span::before { content: "running · "; color: var(--green); }
+.about { margin: 0; min-height: 5.4em; padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: #050906; color: var(--muted); font-size: 12px; }
+
+/* Load tab: each kind of thing to load folds away */
+details.section { border: 1px solid var(--line); border-radius: 6px; padding: 0 12px; background: var(--panel2); }
+details.section[open] { padding-bottom: 12px; }
+details.section > summary { cursor: pointer; padding: 10px 0; font: 600 16px/1 "Rajdhani", sans-serif; letter-spacing: .06em; color: var(--bright); }
+details.section > * + * { margin-top: 10px; }
+details.section .button { display: inline-block; }
+
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+.check input { margin-top: 3px; accent-color: var(--green); }
+.note a { color: var(--bright); }
+a.button { color: var(--green); text-decoration: none; display: inline-block; }
+a.button:hover { color: var(--bright); }
+#pipos-variant, #pipos-version { flex: 1; min-width: 0; }
+
+/* analogWrite() gauge: a needle from -60° (0) to +60° (1); the backlight class "on" lights the dial.
+   app.js sets --duty (0..1) on the gauge as the duty cycle changes */
+.meter { --duty: 0; }
+.meter { position: relative; display: inline-block; width: 64px; height: 36px; border: 1px solid var(--line); border-radius: 32px 32px 4px 4px; background: #2a2614; overflow: hidden; }
+.meter.on { background: #d9c34a; box-shadow: 0 0 10px #d9c34a80; }
+.meter .needle { position: absolute; left: 31px; bottom: 2px; width: 2px; height: 30px; background: #111; transform-origin: 50% 100%; transform: rotate(calc(-60deg + var(--duty, 0) * 120deg)); transition: transform .15s; }
+header .check.sound { margin: 0; align-items: center; color: var(--muted); }
+#volume { width: 80px; accent-color: var(--green); }

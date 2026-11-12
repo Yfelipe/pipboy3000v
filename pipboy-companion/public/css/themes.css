@@ -1,0 +1,21 @@
+/* ===================================================================== dashboard themes
+   Each sets the base colours; the shades in app.css are mixed from them. --tint colours buttons
+   and highlights when it should differ from the text colour. Picked in the theme dialog
+   (js/theme.js), remembered in this browser. The emulator page uses them too.
+   To add one, follow docs/THEMES.md (test/themes.test.js checks it). */
+[data-theme="fo4"]{--bg:#040c07;--side:#07140b;--panel:#0a1b10;--panel2:#0e2315;--line:#1f5c34;--green:#3dff7a;--bright:#b9ffd0;--dim:#33b862;--muted:#77c08e;--amber:#ffd24d;--red:#ff6b5b}
+[data-theme="nv"]{--bg:#0f0b05;--side:#17110a;--panel:#1c150c;--panel2:#241b0f;--line:#5c4422;--green:#ffb642;--bright:#ffe2a8;--dim:#c98a2c;--muted:#c9a46a;--amber:#fff1b8;--red:#ff6f61}
+[data-theme="vaulttec"]{--bg:#07132b;--side:#0b1a38;--panel:#0f2147;--panel2:#132955;--line:#2c4f8f;--green:#ffd23f;--bright:#fff1b8;--dim:#d4ad2f;--muted:#a6b8dc;--amber:#ff9f43;--red:#ff7b7b;--tint:#4a7fe0}
+[data-theme="nuka"]{--bg:#120506;--side:#1b080a;--panel:#220b0d;--panel2:#2b0f12;--line:#6b2228;--green:#ff5a4d;--bright:#ffd3cc;--dim:#c9473d;--muted:#d69e97;--amber:#ffd166;--red:#ffa8d8}
+[data-theme="quantum"]{--bg:#04081a;--side:#070d26;--panel:#0a1230;--panel2:#0e183d;--line:#23408a;--green:#5ad1ff;--bright:#cdf3ff;--dim:#3d98c9;--muted:#93b4ce;--amber:#ffcf5a;--red:#ff7096}
+[data-theme="institute"]{--bg:#0d1114;--side:#141a1e;--panel:#182025;--panel2:#1d272d;--line:#3c5059;--green:#d8f3f5;--bright:#ffffff;--dim:#8fb9bf;--muted:#9aabaf;--amber:#f2c46d;--red:#ff8a80;--tint:#4fb3bf}
+[data-theme="brotherhood"]{--bg:#0e0e10;--side:#151517;--panel:#1a1a1d;--panel2:#202024;--line:#47474f;--green:#d9d1bf;--bright:#f5f0e4;--dim:#a8a08f;--muted:#9c978d;--amber:#e8b04a;--red:#ff6a5c;--tint:#a8352b}
+[data-theme="glow"]{--bg:#0b0d03;--side:#121505;--panel:#161a07;--panel2:#1c2109;--line:#4b5a14;--green:#d7ff3a;--bright:#f3ffb5;--dim:#a3c224;--muted:#aebc78;--amber:#ffb13b;--red:#ff6b5b}
+[data-theme="enclave"]{--bg:#05090d;--side:#090f15;--panel:#0c141b;--panel2:#101a23;--line:#2a4a5c;--green:#9bdcff;--bright:#e4f6ff;--dim:#5ea4c6;--muted:#8eaec0;--amber:#ffc857;--red:#ff6b6b}
+[data-theme="legion"]{--bg:#0c0404;--side:#130707;--panel:#190909;--panel2:#200c0c;--line:#5c1f1f;--green:#ff6a5e;--bright:#ffdcd6;--dim:#c84a42;--muted:#cf9d97;--amber:#ffd166;--red:#ff9ad5;--tint:#c9a227}
+[data-theme="ncr"]{--bg:#0e0b07;--side:#15110b;--panel:#1a150d;--panel2:#211b11;--line:#574a2c;--green:#e0cfa0;--bright:#fbf2d8;--dim:#ad9a68;--muted:#b5a98b;--amber:#ffb347;--red:#ff6a5c;--tint:#7d8a3e}
+[data-theme="lucky38"]{--bg:#030b0a;--side:#061312;--panel:#081918;--panel2:#0b201e;--line:#1f5a52;--green:#5fe3c8;--bright:#cffff4;--dim:#3ba892;--muted:#86b8ad;--amber:#ffcf5a;--red:#ff7a7a}
+[data-theme="classic"]{--bg:#0c0a06;--side:#13100a;--panel:#19150c;--panel2:#201b10;--line:#5a4a28;--green:#7fe35a;--bright:#d6ffc2;--dim:#5fae43;--muted:#a9ad8a;--amber:#ffc25a;--red:#ff7361;--tint:#b08d3c}
+[data-theme="appalachia"]{--bg:#0a0d10;--side:#0f1418;--panel:#131a1f;--panel2:#182127;--line:#3b4d57;--green:#dfe38a;--bright:#fbfdd4;--dim:#a9ad62;--muted:#a8b3a0;--amber:#ff9f4a;--red:#ff7a70;--tint:#c8642a}
+[data-theme="robco"]{--bg:#000000;--side:#070707;--panel:#0b0b0b;--panel2:#121212;--line:#3a3f3a;--green:#4dff6a;--bright:#c8ffd2;--dim:#36b84b;--muted:#93a896;--amber:#ffd24d;--red:#ff6b5b}
+[data-theme="sierra-madre"]{--bg:#110706;--side:#190b09;--panel:#1f0e0b;--panel2:#27120e;--line:#6b2f22;--green:#e8c063;--bright:#fff0c9;--dim:#b08f45;--muted:#c2a58c;--amber:#ffffd0;--red:#ff6a5c;--tint:#b5412e}

@@ -142,6 +142,7 @@ describe('file names', () => {
 describe('misc', () => {
   test('validateMedia flags extension, size and character problems', () => {
     assert.equal(validateMedia({ name: 'song.MP3', size: 10 }).ok, true);
+    assert.equal(validateMedia({ name: 'VAULT.avi', size: 10 }).ok, true); // the Pip-Boy's own video format
     assert.match(validateMedia({ name: 'archive.zip', size: 10 }).message, /Extension/);
     assert.match(validateMedia({ name: 'noext', size: 10 }).message, /Extension/);
     assert.match(validateMedia({ name: 'a.mp3', size: 0 }).message, /empty/);
